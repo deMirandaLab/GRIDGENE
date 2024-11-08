@@ -24,8 +24,7 @@ pip install gridgen
 tutorials on test folder 
 
 
-```python
-License
+## License
 This project is licensed under the MIT License. ?
 Check license 
 See the LICENSE file for more information.
