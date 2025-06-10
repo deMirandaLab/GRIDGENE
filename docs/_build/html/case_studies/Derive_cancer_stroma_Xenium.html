@@ -1,0 +1,954 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Derive cancer and stroma masks in Xenium data &#8212; GRIDGEN 0.1 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=2709fde1"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'case_studies/Derive_cancer_stroma_Xenium';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="API Reference" href="../api/index.html" />
+    <link rel="prev" title="Derive cancer and stroma masks in CosMx data" href="Derive_cancer_stroma_CosMx.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">GRIDGEN 0.1 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Case Studies (Jupyter Notebooks):</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="cancer_stroma_interface_xenium.html">Analysis of Cancer Stroma Interface in Xenium</a></li>
+
+
+
+<li class="toctree-l1"><a class="reference internal" href="Derive_cancer_stroma_CosMx.html">Derive cancer and stroma masks in CosMx data</a></li>
+
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Derive cancer and stroma masks in Xenium data</a></li>
+
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../tutorials/index.html" class="nav-link">Tutorials</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Derive cancer and stroma masks in Xenium data</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="derive-cancer-and-stroma-masks-in-xenium-data">
+<h1>Derive cancer and stroma masks in Xenium data<a class="headerlink" href="#derive-cancer-and-stroma-masks-in-xenium-data" title="Link to this heading">#</a></h1>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span> 
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">natsort</span><span class="w"> </span><span class="kn">import</span> <span class="n">natsorted</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tifffile</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tiff</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span> 
+
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()))</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">src</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_arrays</span> <span class="k">as</span> <span class="n">ga</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">src</span><span class="w"> </span><span class="kn">import</span> <span class="n">contours</span> 
+<span class="kn">from</span><span class="w"> </span><span class="nn">src</span><span class="w"> </span><span class="kn">import</span> <span class="n">masks</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">src.mask_properties</span><span class="w"> </span><span class="kn">import</span> <span class="n">GetMasksProperties</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># define the logger :  can be None, and is set to INFO</span>
+<span class="c1"># Custom logger setup</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;contour_logger&#39;</span><span class="p">)</span>
+<span class="n">handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">()</span>
+<span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%(asctime)s</span><span class="s1"> - </span><span class="si">%(name)s</span><span class="s1"> - </span><span class="si">%(levelname)s</span><span class="s1"> - </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">handler</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="xenium-data">
+<h1>Xenium Data<a class="headerlink" href="#xenium-data" title="Link to this heading">#</a></h1>
+<p>Resolution
+1 px = 1um</p>
+<p>Transcripts -&gt; 499 + system and negative controls</p>
+<p>custom made panel</p>
+<p>CRC cohort</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">xenium_path</span> <span class="o">=</span>  <span class="s1">&#39;../../xenium_data/HLA/GD_TMA1_S3/fov_filtered&#39;</span>
+
+<span class="n">to_exclude</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;TMA1_Selection14_filtered.csv&#39;</span> <span class="p">,</span> <span class="c1"># little tumour</span>
+    <span class="s1">&#39;TMA1_Selection15_filtered.csv&#39;</span><span class="p">,</span> <span class="c1"># tonsil</span>
+    <span class="s1">&#39;TMA1_Selection18_filtered.csv&#39;</span> <span class="p">,</span> <span class="c1"># normal</span>
+    <span class="s1">&#39;TMA1_Selection24_filtered.csv&#39;</span><span class="p">,</span> <span class="c1"># tonsl </span>
+    <span class="s1">&#39;TMA1_Selection27_filtered.csv&#39;</span><span class="p">,</span> <span class="c1"># low quality</span>
+    <span class="s1">&#39;TMA1_Selection32_filtered.csv&#39;</span><span class="p">,</span> <span class="c1"># low quality</span>
+    <span class="s1">&#39;TMA1_Selection33_filtered.csv&#39;</span><span class="p">,</span> <span class="c1"># low quality</span>
+             <span class="p">]</span>
+<span class="n">files_tma1</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">xenium_path</span><span class="p">)</span>
+<span class="c1"># Adding the full path to each file</span>
+<span class="n">files_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">xenium_path</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files_tma1</span> <span class="k">if</span> <span class="n">file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">to_exclude</span><span class="p">]</span>
+<span class="n">files_xenium</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">files_names</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">files_names</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>20
+</pre></div>
+</div>
+</div>
+</div>
+<p>Let’s open one file to see how it looks like. Negative probes and controls have been removed</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">file_csv</span> <span class="o">=</span> <span class="n">files_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>   <span class="c1"># 5</span>
+<span class="n">df_total</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">file_csv</span><span class="p">)</span>
+<span class="n">df_total</span> <span class="o">=</span> <span class="n">df_total</span><span class="p">[[</span><span class="s1">&#39;x_location&#39;</span><span class="p">,</span> <span class="s1">&#39;y_location&#39;</span><span class="p">,</span> <span class="s1">&#39;feature_name&#39;</span><span class="p">]]</span>
+<span class="n">df_total</span> <span class="o">=</span> <span class="n">df_total</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;feature_name&#39;</span><span class="p">:</span> <span class="s1">&#39;target&#39;</span><span class="p">})</span>
+<span class="n">df_total</span> <span class="o">=</span> <span class="n">df_total</span><span class="p">[</span><span class="o">~</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">&#39;System|egative&#39;</span><span class="p">)]</span>
+<span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;x_location&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;x_location&#39;</span><span class="p">])</span>
+<span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;Y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;y_location&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;y_location&#39;</span><span class="p">])</span>
+
+<span class="n">n_genes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+<span class="n">height</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">]))</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">width</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;Y&#39;</span><span class="p">]))</span> <span class="o">+</span> <span class="mi">1</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;n genes: </span><span class="si">{</span><span class="n">n_genes</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;shape: </span><span class="si">{</span><span class="n">height</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">width</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;n hits </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">df_total</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>n genes: 480
+shape: 1888, 1801
+n hits 3299650
+</pre></div>
+</div>
+</div>
+</div>
+<p>Define GRIDGEN parameters and obtain arrays.</p>
+<p>This part is similar to CosMx. The parameters need ot be adjusted accordingly to the data characteristics.</p>
+<p>Contours designed:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>- Contours for the cancer regions using the cancer trasncripts.
+- Contours around the regions that have tissue (emptiness) using all the transcripts available.
+</pre></div>
+</div>
+<p>We will plot the results with the graphics available in GRIDGEN:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>- contours scatter - where each transcript point of that region is blue and the contour is red.
+- conv sum - plot with the convolutional sum image ( densities on each kernel).
+</pre></div>
+</div>
+<p>Next we will trasnform the contours into masks.
+Cancer masks will be equivalent to the cancer contours. Stroma masks will be the total tissue contours without the cancer areas.</p>
+<p>Some operations can be done to get smoother masks. In the example below, holes in tumour masks are filled. This is optional.</p>
+<p>we wrap the pipeline in a function and apply it to the full cohort.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># defined with the gene list f</span>
+<span class="n">target_tum</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;EPCAM&#39;</span><span class="p">,</span> <span class="s1">&#39;SMIM22&#39;</span><span class="p">,</span><span class="s1">&#39;CLDN3&#39;</span><span class="p">,</span> <span class="s1">&#39;KRT18&#39;</span><span class="p">,</span><span class="s1">&#39;LGALS4&#39;</span><span class="p">,</span> <span class="s1">&#39;KRT8&#39;</span><span class="p">,</span> <span class="s1">&#39;ELF3&#39;</span><span class="p">,</span><span class="s1">&#39;TSPAN8&#39;</span><span class="p">,</span> <span class="s1">&#39;STMN1&#39;</span><span class="p">,</span> <span class="s1">&#39;CD47&#39;</span><span class="p">,</span> <span class="s1">&#39;MYC&#39;</span><span class="p">,</span> <span class="s1">&#39;LGALS3&#39;</span><span class="p">]</span> 
+
+<span class="c1"># param tum</span>
+<span class="n">density_th_tum</span> <span class="o">=</span> <span class="mi">20</span>    <span class="c1"># 50</span>
+<span class="n">min_area_th_tum</span> <span class="o">=</span>  <span class="mi">700</span> <span class="c1">#1000     check how much is a cell </span>
+<span class="n">kernel_size_tum</span> <span class="o">=</span> <span class="mi">10</span>   <span class="c1"># 20</span>
+
+<span class="c1"># param empty</span>
+<span class="n">density_th_empty</span> <span class="o">=</span> <span class="mi">30</span>
+<span class="n">min_area_th_empty</span> <span class="o">=</span> <span class="mi">400</span> <span class="c1">#400</span>
+<span class="n">kernel_size_empty</span> <span class="o">=</span> <span class="mi">10</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">do_xenium_all</span><span class="p">(</span><span class="n">file_csv</span><span class="p">):</span>
+    <span class="n">df_total</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">file_csv</span><span class="p">)</span>
+    <span class="n">df_total</span> <span class="o">=</span> <span class="n">df_total</span><span class="p">[[</span><span class="s1">&#39;x_location&#39;</span><span class="p">,</span> <span class="s1">&#39;y_location&#39;</span><span class="p">,</span> <span class="s1">&#39;feature_name&#39;</span><span class="p">]]</span>
+    <span class="n">df_total</span> <span class="o">=</span> <span class="n">df_total</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;feature_name&#39;</span><span class="p">:</span> <span class="s1">&#39;target&#39;</span><span class="p">})</span>
+    <span class="n">df_total</span> <span class="o">=</span> <span class="n">df_total</span><span class="p">[</span><span class="o">~</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">&#39;System|egative&#39;</span><span class="p">)]</span>
+    <span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;x_location&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;x_location&#39;</span><span class="p">])</span>
+    <span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;Y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;y_location&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;y_location&#39;</span><span class="p">])</span>
+    
+    <span class="n">n_genes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+    <span class="n">height</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">]))</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">width</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;Y&#39;</span><span class="p">]))</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;shape array: (</span><span class="si">{</span><span class="n">height</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">width</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">n_genes</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;number of transcripts:&quot;</span><span class="p">,</span> <span class="n">df_total</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="c1"># this makes the sparse df to an array with the spatial information </span>
+    <span class="n">target_dict_total</span> <span class="o">=</span> <span class="p">{</span><span class="n">target</span><span class="p">:</span> <span class="n">index</span> <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())}</span>
+    <span class="n">array_total</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">transform_df_to_array</span><span class="p">(</span><span class="n">df</span> <span class="o">=</span> <span class="n">df_total</span><span class="p">,</span> <span class="n">target_dict</span><span class="o">=</span><span class="n">target_dict_total</span><span class="p">,</span> <span class="n">array_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">target_dict_total</span><span class="p">)))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">)</span>
+    
+    <span class="c1"># creating subsets </span>
+    <span class="n">df_subset_tum</span><span class="p">,</span> <span class="n">array_subset_tum</span><span class="p">,</span> <span class="n">target_indices_subset_tum</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">get_subset_arrays</span><span class="p">(</span><span class="n">df_total</span><span class="p">,</span> <span class="n">array_total</span><span class="p">,</span><span class="n">target_dict_total</span><span class="p">,</span>
+                                                                         <span class="n">target_list</span><span class="o">=</span><span class="n">target_tum</span><span class="p">,</span> <span class="n">target_col</span> <span class="o">=</span> <span class="s1">&#39;target&#39;</span><span class="p">)</span>
+    
+<span class="c1"># obtain contours </span>
+    <span class="n">CTum</span> <span class="o">=</span> <span class="n">contours</span><span class="o">.</span><span class="n">ConvolutionContours</span><span class="p">(</span><span class="n">array_subset_tum</span><span class="p">,</span> <span class="n">contour_name</span><span class="o">=</span><span class="s1">&#39;tum&#39;</span><span class="p">)</span>
+    <span class="n">CTum</span><span class="o">.</span><span class="n">get_conv_sum</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size_tum</span><span class="p">,</span> <span class="n">kernel_shape</span><span class="o">=</span><span class="s1">&#39;square&#39;</span><span class="p">)</span>
+    <span class="n">CTum</span><span class="o">.</span><span class="n">contours_from_sum</span><span class="p">(</span><span class="n">density_threshold</span> <span class="o">=</span> <span class="n">density_th_tum</span><span class="p">,</span>
+                           <span class="n">min_area_threshold</span> <span class="o">=</span> <span class="n">min_area_th_tum</span> <span class="p">,</span> <span class="n">directionality</span> <span class="o">=</span> <span class="s1">&#39;higher&#39;</span><span class="p">)</span>
+    
+    <span class="n">CEmpty</span> <span class="o">=</span> <span class="n">contours</span><span class="o">.</span><span class="n">ConvolutionContours</span><span class="p">(</span><span class="n">array_total</span><span class="p">,</span> <span class="n">contour_name</span><span class="o">=</span><span class="s1">&#39;empty&#39;</span><span class="p">)</span>
+    <span class="n">CEmpty</span><span class="o">.</span><span class="n">get_conv_sum</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size_empty</span><span class="p">,</span> <span class="n">kernel_shape</span><span class="o">=</span><span class="s1">&#39;square&#39;</span><span class="p">)</span>
+    <span class="n">CEmpty</span><span class="o">.</span><span class="n">contours_from_sum</span><span class="p">(</span><span class="n">density_threshold</span> <span class="o">=</span> <span class="n">density_th_empty</span><span class="p">,</span>
+                           <span class="n">min_area_threshold</span> <span class="o">=</span> <span class="n">min_area_th_empty</span><span class="p">,</span> <span class="n">directionality</span> <span class="o">=</span> <span class="s1">&#39;lower&#39;</span><span class="p">)</span> <span class="c1"># attention that directionality is lower here </span>
+    
+    <span class="c1"># PLOTs -- instead of plotting just with the function for example: CTum.plot_contours_scatter, we will make a composite image </span>
+    
+<span class="c1">#     fig, axs = plt.subplots(1, 2, figsize=(8,4))</span>
+<span class="c1">#     CTum.plot_contours_scatter(path=None, show=False, s=0.05, alpha=0.5, linewidth=1,</span>
+<span class="c1">#                                c_points= &#39;blue&#39;,c_contours= &#39;red&#39;, ax=axs[0])</span>
+<span class="c1">#     axs[0].set_title(&#39;Tum points and tum contours&#39;)  </span>
+    
+    
+<span class="c1">#     CEmpty.plot_contours_scatter(path=None, show=False, s=0.05, alpha=0.5, linewidth=1,</span>
+<span class="c1">#                                c_points= &#39;blue&#39;,c_contours= &#39;red&#39;, ax=axs[1])</span>
+<span class="c1">#     axs[0].set_title(&#39;total points and contours for empty&#39;)  </span>
+<span class="c1">#     plt.subplots_adjust(wspace=0.02)  # Adjust to your preference</span>
+    
+<span class="c1">#     plt.show()</span>
+       
+    
+    <span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+    
+    <span class="n">CTum</span><span class="o">.</span><span class="n">plot_conv_sum</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;plasma&#39;</span><span class="p">,</span> <span class="n">c_countour</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Tum points and tum contours&#39;</span><span class="p">)</span>
+    
+    <span class="n">CEmpty</span><span class="o">.</span><span class="n">plot_conv_sum</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;plasma&#39;</span><span class="p">,</span> <span class="n">c_countour</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;total points and contours for empty&#39;</span><span class="p">)</span>
+    
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    
+    <span class="c1">#### obtain masks</span>
+    <span class="n">GM</span> <span class="o">=</span> <span class="n">masks</span><span class="o">.</span><span class="n">GetMasks</span><span class="p">(</span><span class="n">image_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">))</span>
+    
+    <span class="n">mask_empty</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">create_mask</span><span class="p">(</span><span class="n">CEmpty</span><span class="o">.</span><span class="n">contours</span><span class="p">)</span>
+    <span class="n">mask_tum</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">create_mask</span><span class="p">(</span><span class="n">CTum</span><span class="o">.</span><span class="n">contours</span><span class="p">)</span>
+    <span class="n">mask_tum</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">fill_holes</span><span class="p">(</span><span class="n">mask_tum</span><span class="p">)</span>
+    <span class="n">mask_stroma</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">subtract_masks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="n">mask_tum</span><span class="p">,</span> <span class="n">mask_empty</span><span class="p">)</span>          
+    <span class="n">mask_stroma</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">filter_mask_by_area</span><span class="p">(</span><span class="n">mask_stroma</span><span class="p">,</span> <span class="n">min_area</span><span class="o">=</span><span class="mi">700</span><span class="p">)</span>
+    
+    <span class="c1"># general masks </span>
+    <span class="n">GM</span><span class="o">.</span><span class="n">mask_S</span> <span class="o">=</span> <span class="n">mask_stroma</span>
+    <span class="n">GM</span><span class="o">.</span><span class="n">mask_T</span> <span class="o">=</span> <span class="n">mask_tum</span>
+    
+    <span class="n">GM</span><span class="o">.</span><span class="n">plot_masks</span><span class="p">(</span><span class="n">masks</span><span class="o">=</span><span class="p">[</span><span class="n">GM</span><span class="o">.</span><span class="n">mask_S</span><span class="p">,</span> <span class="n">GM</span><span class="o">.</span><span class="n">mask_T</span><span class="p">],</span> <span class="n">mask_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Stroma&#39;</span><span class="p">,</span> <span class="s1">&#39;Tumour&#39;</span><span class="p">],</span>
+                  <span class="n">background_color</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">mask_colors</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Stroma&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">65</span><span class="p">,</span> <span class="mi">105</span><span class="p">,</span> <span class="mi">225</span><span class="p">),</span> <span class="s1">&#39;Tumour&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">165</span><span class="p">,</span> <span class="mi">0</span><span class="p">)},</span>
+                  <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">GM</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%time</span>
+<span class="k">for</span> <span class="n">file_csv</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">files_names</span><span class="p">):</span>
+    <span class="n">GM</span> <span class="o">=</span>  <span class="n">do_xenium_all</span><span class="p">(</span><span class="n">file_csv</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>  0%|                                                                                                                                                        | 0/20 [00:00&lt;?, ?it/s]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1888, 1801, 480)
+number of transcripts: 3299650
+Function &#39;get_conv_sum&#39; took 0.0800 seconds to execute.
+Function &#39;contours_from_sum&#39; took 4.0038 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.6368 seconds to execute.
+Function &#39;contours_from_sum&#39; took 4.7085 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/5224ce1bc00f4a83c42642f5da7bdf89ad171ecfc7b3455dbfbc0e7eac49ad6d.png" src="../_images/5224ce1bc00f4a83c42642f5da7bdf89ad171ecfc7b3455dbfbc0e7eac49ad6d.png" />
+<img alt="../_images/3679dbd8555f06b38c5a977358d632529eacb7ee3c29677b8b10e45fb798709a.png" src="../_images/3679dbd8555f06b38c5a977358d632529eacb7ee3c29677b8b10e45fb798709a.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>  5%|███████▏                                                                                                                                        | 1/20 [00:15&lt;04:46, 15.06s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1777, 1919, 480)
+number of transcripts: 3716715
+Function &#39;get_conv_sum&#39; took 0.0821 seconds to execute.
+Function &#39;contours_from_sum&#39; took 2.8531 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.5983 seconds to execute.
+Function &#39;contours_from_sum&#39; took 4.3207 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/ea46b2a6f35425735a2c7c3fad0d2619b37b8e24bb45cc58b4558ea00cc2ae79.png" src="../_images/ea46b2a6f35425735a2c7c3fad0d2619b37b8e24bb45cc58b4558ea00cc2ae79.png" />
+<img alt="../_images/d5b90968de417d471fd716b04e67d631d3e5ce3cfb07627008adda286bfc4151.png" src="../_images/d5b90968de417d471fd716b04e67d631d3e5ce3cfb07627008adda286bfc4151.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 10%|██████████████▍                                                                                                                                 | 2/20 [00:29&lt;04:20, 14.49s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1730, 1659, 480)
+number of transcripts: 2181492
+Function &#39;get_conv_sum&#39; took 0.0692 seconds to execute.
+Function &#39;contours_from_sum&#39; took 0.2893 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.4906 seconds to execute.
+Function &#39;contours_from_sum&#39; took 4.7191 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/347e8f958dc654e0df0bdf7f67f01c33cea30413cb7cc712e49f40a8cb1d5fcf.png" src="../_images/347e8f958dc654e0df0bdf7f67f01c33cea30413cb7cc712e49f40a8cb1d5fcf.png" />
+<img alt="../_images/1bd45011ffc5776a77a4edf56ece20e2d0e4efba26d4d86f374735fe38c8dc53.png" src="../_images/1bd45011ffc5776a77a4edf56ece20e2d0e4efba26d4d86f374735fe38c8dc53.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 15%|█████████████████████▌                                                                                                                          | 3/20 [00:38&lt;03:29, 12.30s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1646, 1619, 479)
+number of transcripts: 1663749
+Function &#39;get_conv_sum&#39; took 0.0623 seconds to execute.
+Function &#39;contours_from_sum&#39; took 0.5044 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.5299 seconds to execute.
+Function &#39;contours_from_sum&#39; took 0.7701 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/1a3485bfb166be7ea5e06e08b70699e836ba64570b4511d1e7151f503bdafcf2.png" src="../_images/1a3485bfb166be7ea5e06e08b70699e836ba64570b4511d1e7151f503bdafcf2.png" />
+<img alt="../_images/5985d789acd78e0c802431f5825c3ce89d983ed7ec8e91878053675a7dbce37d.png" src="../_images/5985d789acd78e0c802431f5825c3ce89d983ed7ec8e91878053675a7dbce37d.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 20%|████████████████████████████▊                                                                                                                   | 4/20 [00:43&lt;02:31,  9.46s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1809, 1809, 480)
+number of transcripts: 2491593
+Function &#39;get_conv_sum&#39; took 0.0805 seconds to execute.
+Function &#39;contours_from_sum&#39; took 0.4619 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.6642 seconds to execute.
+Function &#39;contours_from_sum&#39; took 5.7884 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/24708cd60a8aa17529ad718058d69fd1fca6390f659e3f616a4ff11eddbe8c5a.png" src="../_images/24708cd60a8aa17529ad718058d69fd1fca6390f659e3f616a4ff11eddbe8c5a.png" />
+<img alt="../_images/b15103f883ecc0c2b4ff8054a30ad28af4c666c11618aa71dbfd3c8e91d0c205.png" src="../_images/b15103f883ecc0c2b4ff8054a30ad28af4c666c11618aa71dbfd3c8e91d0c205.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 25%|████████████████████████████████████                                                                                                            | 5/20 [00:55&lt;02:32, 10.20s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1833, 1871, 480)
+number of transcripts: 5055906
+Function &#39;get_conv_sum&#39; took 0.0838 seconds to execute.
+Function &#39;contours_from_sum&#39; took 9.1678 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.6099 seconds to execute.
+Function &#39;contours_from_sum&#39; took 0.9627 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/407a3a807426a94211cecb8752bf0c3285923fdf43300c0a8a1d257e4eecfeaf.png" src="../_images/407a3a807426a94211cecb8752bf0c3285923fdf43300c0a8a1d257e4eecfeaf.png" />
+<img alt="../_images/c621e361ad8dd87c24cf4a3a50d59dd757c6c5427dc46df35583db775ef33144.png" src="../_images/c621e361ad8dd87c24cf4a3a50d59dd757c6c5427dc46df35583db775ef33144.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 30%|███████████████████████████████████████████▏                                                                                                    | 6/20 [01:14&lt;03:03, 13.11s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1935, 1785, 480)
+number of transcripts: 4210232
+Function &#39;get_conv_sum&#39; took 0.0819 seconds to execute.
+Function &#39;contours_from_sum&#39; took 2.8182 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.6959 seconds to execute.
+Function &#39;contours_from_sum&#39; took 1.3147 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/36d995298cf1ebd836a32dcb10d712df210eded0942a783f9b8a84cbb8fce65e.png" src="../_images/36d995298cf1ebd836a32dcb10d712df210eded0942a783f9b8a84cbb8fce65e.png" />
+<img alt="../_images/0580de4f95ffece29f5ae17173957e72fc803c6563020f0b0da66e7f55a074e5.png" src="../_images/0580de4f95ffece29f5ae17173957e72fc803c6563020f0b0da66e7f55a074e5.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 35%|██████████████████████████████████████████████████▍                                                                                             | 7/20 [01:26&lt;02:45, 12.71s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1809, 1769, 480)
+number of transcripts: 4433228
+Function &#39;get_conv_sum&#39; took 0.0762 seconds to execute.
+Function &#39;contours_from_sum&#39; took 1.8036 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.5670 seconds to execute.
+Function &#39;contours_from_sum&#39; took 1.4066 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/305543315fc0801afaf3639c8edcd78e688140cc81a659b82b0e6bd470ef71b7.png" src="../_images/305543315fc0801afaf3639c8edcd78e688140cc81a659b82b0e6bd470ef71b7.png" />
+<img alt="../_images/f07ac8a2d717e5be9f772175a01a88ce5fe21ee6117dd65f94bf4bd6c2d07bd5.png" src="../_images/f07ac8a2d717e5be9f772175a01a88ce5fe21ee6117dd65f94bf4bd6c2d07bd5.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 40%|█████████████████████████████████████████████████████████▌                                                                                      | 8/20 [01:37&lt;02:26, 12.17s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1864, 1817, 480)
+number of transcripts: 3753386
+Function &#39;get_conv_sum&#39; took 0.0833 seconds to execute.
+Function &#39;contours_from_sum&#39; took 0.8140 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.6002 seconds to execute.
+Function &#39;contours_from_sum&#39; took 1.5355 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/d308d6266a3c1bf5935958fe685979ee16f2cc4fb58d65ddb931388e8d4588e0.png" src="../_images/d308d6266a3c1bf5935958fe685979ee16f2cc4fb58d65ddb931388e8d4588e0.png" />
+<img alt="../_images/9c7ab458a9e7c625468e529d115416cda2a63c134febec93c1f0d27b6ed4a163.png" src="../_images/9c7ab458a9e7c625468e529d115416cda2a63c134febec93c1f0d27b6ed4a163.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 45%|████████████████████████████████████████████████████████████████▊                                                                               | 9/20 [01:46&lt;02:04, 11.29s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1817, 1817, 480)
+number of transcripts: 2084362
+Function &#39;get_conv_sum&#39; took 0.0807 seconds to execute.
+Function &#39;contours_from_sum&#39; took 0.3528 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.5807 seconds to execute.
+Function &#39;contours_from_sum&#39; took 2.4814 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/0bf15be9e4fdf3e659e46cad8ccda9830c075eac4cc960e2430ee20b6ae1a77e.png" src="../_images/0bf15be9e4fdf3e659e46cad8ccda9830c075eac4cc960e2430ee20b6ae1a77e.png" />
+<img alt="../_images/672fbe39c8fb7c83089d9b61724d705222c7e6c9efffe7157e35d8fe8c461cbb.png" src="../_images/672fbe39c8fb7c83089d9b61724d705222c7e6c9efffe7157e35d8fe8c461cbb.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 50%|███████████████████████████████████████████████████████████████████████▌                                                                       | 10/20 [01:53&lt;01:41, 10.10s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1521, 1675, 480)
+number of transcripts: 2773943
+Function &#39;get_conv_sum&#39; took 0.0613 seconds to execute.
+Function &#39;contours_from_sum&#39; took 1.0570 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.5329 seconds to execute.
+Function &#39;contours_from_sum&#39; took 1.3863 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/7e3c304485e413a7c2447825d391b9e3e2fedfc3d88cffe4094ade3fd4b2749f.png" src="../_images/7e3c304485e413a7c2447825d391b9e3e2fedfc3d88cffe4094ade3fd4b2749f.png" />
+<img alt="../_images/f5776566fde446ae9208bdb8d102f03e2d7b40a4fbccc3022e025e7491dd7d55.png" src="../_images/f5776566fde446ae9208bdb8d102f03e2d7b40a4fbccc3022e025e7491dd7d55.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 55%|██████████████████████████████████████████████████████████████████████████████▋                                                                | 11/20 [02:01&lt;01:24,  9.39s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1566, 1525, 479)
+number of transcripts: 3401574
+Function &#39;get_conv_sum&#39; took 0.0571 seconds to execute.
+Function &#39;contours_from_sum&#39; took 1.7243 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.4941 seconds to execute.
+Function &#39;contours_from_sum&#39; took 1.1958 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/2c70810a7e37e52148866ecc3c5b048dce11866292cae42260c791b2cee3af82.png" src="../_images/2c70810a7e37e52148866ecc3c5b048dce11866292cae42260c791b2cee3af82.png" />
+<img alt="../_images/2b75358523815ff207f1f44bc8d7a6356395a8be46bee7475cb162184af4e9b7.png" src="../_images/2b75358523815ff207f1f44bc8d7a6356395a8be46bee7475cb162184af4e9b7.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 60%|█████████████████████████████████████████████████████████████████████████████████████▊                                                         | 12/20 [02:10&lt;01:14,  9.27s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1746, 1651, 480)
+number of transcripts: 2902610
+Function &#39;get_conv_sum&#39; took 0.0675 seconds to execute.
+Function &#39;contours_from_sum&#39; took 0.2722 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.5438 seconds to execute.
+Function &#39;contours_from_sum&#39; took 2.1631 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/87c86ce6c4f2e844505950c54905ce3d5c40939c85d11f9a37e228d3a3b45af1.png" src="../_images/87c86ce6c4f2e844505950c54905ce3d5c40939c85d11f9a37e228d3a3b45af1.png" />
+<img alt="../_images/8bcee1924ce6e9c7aee4ab69bb78ef2b419741950a8ac8548c6c770fc787b07a.png" src="../_images/8bcee1924ce6e9c7aee4ab69bb78ef2b419741950a8ac8548c6c770fc787b07a.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 65%|████████████████████████████████████████████████████████████████████████████████████████████▉                                                  | 13/20 [02:18&lt;01:02,  8.91s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1690, 1675, 480)
+number of transcripts: 2077338
+Function &#39;get_conv_sum&#39; took 0.0664 seconds to execute.
+Function &#39;contours_from_sum&#39; took 4.1856 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.5878 seconds to execute.
+Function &#39;contours_from_sum&#39; took 4.1059 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/6f56c9e5d7e67b5e69587c492fb33de45b99c47c481b0f4eaee1210aa68fd458.png" src="../_images/6f56c9e5d7e67b5e69587c492fb33de45b99c47c481b0f4eaee1210aa68fd458.png" />
+<img alt="../_images/fb60a42dabef7acc18d27277d1f80a7fa30b1b1f64b92823bef84bb0e08f5190.png" src="../_images/fb60a42dabef7acc18d27277d1f80a7fa30b1b1f64b92823bef84bb0e08f5190.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 70%|████████████████████████████████████████████████████████████████████████████████████████████████████                                           | 14/20 [02:31&lt;01:00, 10.14s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1793, 1888, 479)
+number of transcripts: 4100005
+Function &#39;get_conv_sum&#39; took 0.0839 seconds to execute.
+Function &#39;contours_from_sum&#39; took 0.7778 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.6893 seconds to execute.
+Function &#39;contours_from_sum&#39; took 1.2959 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/1573ca33723a3b4e42ba2769f9cd205b6cb24206320f47b998ee12cb8e8b57db.png" src="../_images/1573ca33723a3b4e42ba2769f9cd205b6cb24206320f47b998ee12cb8e8b57db.png" />
+<img alt="../_images/9121c36af7e3f7c4ad8ff4185100bb86c9aab5b39b565792b427b5d23e36edd8.png" src="../_images/9121c36af7e3f7c4ad8ff4185100bb86c9aab5b39b565792b427b5d23e36edd8.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 75%|███████████████████████████████████████████████████████████████████████████████████████████████████████████▎                                   | 15/20 [02:41&lt;00:49,  9.98s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1769, 1762, 480)
+number of transcripts: 4048670
+Function &#39;get_conv_sum&#39; took 0.0772 seconds to execute.
+Function &#39;contours_from_sum&#39; took 1.5491 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.6027 seconds to execute.
+Function &#39;contours_from_sum&#39; took 1.6653 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/c4f9b1035ebd75becbc4de030f2a5d627b73c2d9cc645870e49295330a8c2056.png" src="../_images/c4f9b1035ebd75becbc4de030f2a5d627b73c2d9cc645870e49295330a8c2056.png" />
+<img alt="../_images/29d211ee5f35727bc43e8dd008a6e5d28001e421765b20fa2ec4b996c9e18296.png" src="../_images/29d211ee5f35727bc43e8dd008a6e5d28001e421765b20fa2ec4b996c9e18296.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 80%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████▍                            | 16/20 [02:51&lt;00:40, 10.11s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1920, 1722, 480)
+number of transcripts: 2894746
+Function &#39;get_conv_sum&#39; took 0.0787 seconds to execute.
+Function &#39;contours_from_sum&#39; took 1.8318 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.6252 seconds to execute.
+Function &#39;contours_from_sum&#39; took 3.9750 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/7b8ef8b42dbb3c119abac19ad2f92e75e29bdd19f97cf31604ffec05fa7cfe30.png" src="../_images/7b8ef8b42dbb3c119abac19ad2f92e75e29bdd19f97cf31604ffec05fa7cfe30.png" />
+<img alt="../_images/0b332ebbff45f5eeea93b205fe07b84d30855d017d4ac9b5fb5883a3ea633b22.png" src="../_images/0b332ebbff45f5eeea93b205fe07b84d30855d017d4ac9b5fb5883a3ea633b22.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 85%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▌                     | 17/20 [03:03&lt;00:31, 10.62s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1951, 1896, 479)
+number of transcripts: 3166542
+Function &#39;get_conv_sum&#39; took 0.0877 seconds to execute.
+Function &#39;contours_from_sum&#39; took 2.3879 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.7539 seconds to execute.
+Function &#39;contours_from_sum&#39; took 3.2363 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/a4de4e7a3e4c567b0980408850ec79a8b1713769a625e6050faac1025f164ba0.png" src="../_images/a4de4e7a3e4c567b0980408850ec79a8b1713769a625e6050faac1025f164ba0.png" />
+<img alt="../_images/dd2ba2e9356a167fc677cfaddafadd3d6d1dc3fbfcd6a681f322f15ed02057f3.png" src="../_images/dd2ba2e9356a167fc677cfaddafadd3d6d1dc3fbfcd6a681f322f15ed02057f3.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 90%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▋              | 18/20 [03:15&lt;00:22, 11.06s/it]/tmp/ipykernel_3010636/437774200.py:2: DtypeWarning: Columns (10) have mixed types. Specify dtype option on import or set low_memory=False.
+  df_total = pd.read_csv(file_csv)
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1732, 1738, 480)
+number of transcripts: 2738148
+Function &#39;get_conv_sum&#39; took 0.0727 seconds to execute.
+Function &#39;contours_from_sum&#39; took 5.4067 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.5253 seconds to execute.
+Function &#39;contours_from_sum&#39; took 2.5426 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/30dc04bffae0fcc8b6f61711323c15efc0246e8399e91143a4b9c00d7619041b.png" src="../_images/30dc04bffae0fcc8b6f61711323c15efc0246e8399e91143a4b9c00d7619041b.png" />
+<img alt="../_images/42ec400704a13e3db78ea10d0a82e1e7329886a83bd518e7a5e80d82d1b8c462.png" src="../_images/42ec400704a13e3db78ea10d0a82e1e7329886a83bd518e7a5e80d82d1b8c462.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span> 95%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▊       | 19/20 [03:29&lt;00:11, 11.78s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>shape array: (1722, 1667, 480)
+number of transcripts: 2623962
+Function &#39;get_conv_sum&#39; took 0.0687 seconds to execute.
+Function &#39;contours_from_sum&#39; took 4.9657 seconds to execute.
+Function &#39;get_conv_sum&#39; took 0.5325 seconds to execute.
+Function &#39;contours_from_sum&#39; took 3.0854 seconds to execute.
+</pre></div>
+</div>
+<img alt="../_images/dfe07946dce728a90d995f809da0d51ee12118694a454f806ba86c9427e1e76f.png" src="../_images/dfe07946dce728a90d995f809da0d51ee12118694a454f806ba86c9427e1e76f.png" />
+<img alt="../_images/e76ffc53bc5f88fbb96ad0e83897f54e6561ffba56b54367744c590506458f37.png" src="../_images/e76ffc53bc5f88fbb96ad0e83897f54e6561ffba56b54367744c590506458f37.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [03:42&lt;00:00, 11.12s/it]
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>CPU times: user 3min 37s, sys: 9.05 s, total: 3min 46s
+Wall time: 3min 42s
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="Derive_cancer_stroma_CosMx.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Derive cancer and stroma masks in CosMx data</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../api/index.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">API Reference</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Derive cancer and stroma masks in Xenium data</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#xenium-data">Xenium Data</a></li>
+</ul>
+
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/case_studies/Derive_cancer_stroma_Xenium.ipynb.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, AM Sequeira.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.3.7.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

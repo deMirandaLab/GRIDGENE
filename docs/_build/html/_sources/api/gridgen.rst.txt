@@ -1,0 +1,41 @@
+# docs/source/api/src.rst
+
+src Package
+===========
+
+.. automodule:: gridgen
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Introduction to the GRIDGEN package.
+
+This package provides core functionalities for extracting, organizing, and visualizing transcriptomic spatial data.
+
+Public API Members
+------------------
+
+# REMOVE the 'src' line from here. We'll use this autosummary block
+# when you have specific classes/functions/submodules to list.
+# For now, 'automodule' will handle the full documentation.
+# If you want to add specific top-level classes/functions later:
+
+# .. autosummary::
+#    :toctree: _autosummary/gridgen
+#    :template: autosummary/class.rst
+#    :nosignatures:
+#
+#    src.YourTopLevelClass
+#    src.AnotherClass
+
+# .. autosummary::
+#    :toctree: _autosummary/gridgen
+#    :template: autosummary/function.rst
+#    :nosignatures:
+#
+#    src.your_top_level_function
+#    src.another_function
+
+# Sub-modules and more detailed content will go here once you are ready
+# to document them, similar to what we discussed previously.
+# For now, the 'automodule' above will list them implicitly if they are public members.

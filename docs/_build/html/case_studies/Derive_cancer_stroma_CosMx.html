@@ -1,0 +1,875 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Derive cancer and stroma masks in CosMx data &#8212; GRIDGEN 0.1 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=2709fde1"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'case_studies/Derive_cancer_stroma_CosMx';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Derive cancer and stroma masks in Xenium data" href="Derive_cancer_stroma_Xenium.html" />
+    <link rel="prev" title="Analysis of Cancer Stroma Interface in Xenium" href="cancer_stroma_interface_xenium.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">GRIDGEN 0.1 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Case Studies (Jupyter Notebooks):</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="cancer_stroma_interface_xenium.html">Analysis of Cancer Stroma Interface in Xenium</a></li>
+
+
+
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Derive cancer and stroma masks in CosMx data</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="Derive_cancer_stroma_Xenium.html">Derive cancer and stroma masks in Xenium data</a></li>
+
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../tutorials/index.html" class="nav-link">Tutorials</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Derive cancer and stroma masks in CosMx data</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="derive-cancer-and-stroma-masks-in-cosmx-data">
+<h1>Derive cancer and stroma masks in CosMx data<a class="headerlink" href="#derive-cancer-and-stroma-masks-in-cosmx-data" title="Link to this heading">#</a></h1>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span> 
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">natsort</span><span class="w"> </span><span class="kn">import</span> <span class="n">natsorted</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tifffile</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tiff</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span> 
+
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()))</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">src</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_arrays</span> <span class="k">as</span> <span class="n">ga</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">src</span><span class="w"> </span><span class="kn">import</span> <span class="n">contours</span> 
+<span class="kn">from</span><span class="w"> </span><span class="nn">src</span><span class="w"> </span><span class="kn">import</span> <span class="n">masks</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">src.mask_properties</span><span class="w"> </span><span class="kn">import</span> <span class="n">GetMasksProperties</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># define the logger :  can be None, and is set to INFO</span>
+<span class="c1"># Custom logger setup</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;contour_logger&#39;</span><span class="p">)</span>
+<span class="n">handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">()</span>
+<span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%(asctime)s</span><span class="s1"> - </span><span class="si">%(name)s</span><span class="s1"> - </span><span class="si">%(levelname)s</span><span class="s1"> - </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">handler</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="cosmx-data">
+<h1>Cosmx Data<a class="headerlink" href="#cosmx-data" title="Link to this heading">#</a></h1>
+<p>Resolution
+1 px = 125 nm = 0.125 um
+1 um = 8 px</p>
+<p>Transcripts -&gt; 999 + system and negative controls</p>
+<p>standard panel (not custom made)</p>
+<p>CRC cohort</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cosmx_path_s0</span> <span class="o">=</span>  <span class="s1">&#39;../../cosmx_data/S0/S0/20230628_151317_S4/AnalysisResults/iz38iruwno&#39;</span>
+
+<span class="n">folder_names_s0</span> <span class="o">=</span> <span class="p">[</span><span class="n">folder_name</span> <span class="k">for</span> <span class="n">folder_name</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">cosmx_path_s0</span><span class="p">)</span> <span class="k">if</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cosmx_path_s0</span><span class="p">,</span> <span class="n">folder_name</span><span class="p">))]</span>
+
+<span class="n">target_files_s0</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cosmx_path_s0</span><span class="p">,</span> <span class="n">folder</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">cosmx_path_s0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cosmx_path_s0</span><span class="p">,</span> <span class="n">folder</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cosmx_path_s0</span><span class="p">,</span> <span class="n">folder</span><span class="p">))</span>
+    <span class="k">if</span> <span class="s1">&#39;__target_call_coord.csv&#39;</span> <span class="ow">in</span> <span class="n">file</span>
+<span class="p">]</span>
+
+
+<span class="n">files_names</span> <span class="o">=</span> <span class="n">natsorted</span><span class="p">(</span><span class="n">target_files_s0</span><span class="p">)</span>
+<span class="n">files_cosmx</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">files_names</span><span class="p">)</span>
+<span class="c1"># files_names</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Let’s open one file to see how it looks like</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">file_csv</span> <span class="o">=</span> <span class="n">files_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>   <span class="c1"># 5</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">file_csv</span><span class="p">)</span>
+<span class="n">df_total</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">file_csv</span><span class="p">)</span>
+<span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;Y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;max x&#39;</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;max y&#39;</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;rounded max x&#39;</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">]))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;rounded max y&#39;</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;Y&#39;</span><span class="p">]))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;df shape&#39;</span><span class="p">,</span> <span class="n">df_total</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;df columns&#39;</span><span class="p">,</span> <span class="n">df_total</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+
+<span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>../../cosmx_data/S0/S0/20230628_151317_S4/AnalysisResults/iz38iruwno/FOV001/Run_69de8227-1a7b-40ee-ba46-0ea99a7c59f4_FOV001__target_call_coord.csv
+max x 4245.27
+max y 4245.32
+rounded max x 4245
+rounded max y 4245
+df shape (1843019, 22)
+df columns Index([&#39;Unnamed: 0&#39;, &#39;Spot1_count&#39;, &#39;Spot2_count&#39;, &#39;Spot3_count&#39;,
+       &#39;Spot4_count&#39;, &#39;codeclass&#39;, &#39;fov&#39;, &#39;multicolor_spots_per_feature&#39;,
+       &#39;possible_BC_count&#39;, &#39;random_call_probability&#39;, &#39;seed_x&#39;, &#39;seed_y&#39;,
+       &#39;spots_per_feature&#39;, &#39;target&#39;, &#39;target_call_observations&#39;,
+       &#39;target_count_per_feature&#39;, &#39;target_idx&#39;, &#39;x&#39;, &#39;y&#39;, &#39;z&#39;, &#39;X&#39;, &#39;Y&#39;],
+      dtype=&#39;object&#39;)
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>target
+MALAT1              110996
+TPT1                 67199
+KRT8                 48690
+RPL37                46842
+KRT18                41968
+                     ...  
+SystemControl194         7
+SystemControl10          6
+SystemControl107         4
+SystemControl70          3
+SystemControl134         2
+Name: count, Length: 1207, dtype: int64
+</pre></div>
+</div>
+</div>
+</div>
+<p>Remove the negative controls. We get 999 genes and shape (4245,4245)</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># remove Controls</span>
+<span class="n">df_total</span> <span class="o">=</span> <span class="n">df_total</span><span class="p">[</span><span class="o">~</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">&#39;System|egative&#39;</span><span class="p">)]</span>
+<span class="n">n_genes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+<span class="n">height</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">width</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;Y&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;n genes: </span><span class="si">{</span><span class="n">n_genes</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;shape: </span><span class="si">{</span><span class="n">height</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">width</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;n hits </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">df_total</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>n genes: 999
+shape: 4246, 4246
+n hits 1819904
+</pre></div>
+</div>
+</div>
+</div>
+<p>Define GRIDGEN parameters and obtain arrays</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">target_tum</span> <span class="o">=</span>  <span class="p">[</span><span class="s1">&#39;EPCAM&#39;</span><span class="p">,</span>  <span class="s1">&#39;KRT19&#39;</span><span class="p">,</span> <span class="s1">&#39;KRT8&#39;</span><span class="p">,</span> <span class="s1">&#39;KRT18&#39;</span><span class="p">,</span><span class="s1">&#39;KRT17&#39;</span><span class="p">,</span><span class="s1">&#39;CEACAM6&#39;</span><span class="p">,</span><span class="s1">&#39;SPINK1&#39;</span><span class="p">,</span> <span class="s1">&#39;CD24&#39;</span><span class="p">,</span> <span class="s1">&#39;S100A6&#39;</span><span class="p">,</span><span class="s1">&#39;RPL37&#39;</span><span class="p">,</span><span class="s1">&#39;S100P&#39;</span><span class="p">,]</span>  
+
+<span class="c1"># param tum</span>
+<span class="n">density_th_tum</span> <span class="o">=</span> <span class="mi">40</span>    
+<span class="n">min_area_th_tum</span> <span class="o">=</span>  <span class="mi">1000</span> 
+<span class="n">kernel_size_tum</span> <span class="o">=</span> <span class="mi">80</span>
+
+<span class="c1"># param empty</span>
+<span class="n">density_th_empty</span> <span class="o">=</span> <span class="mi">140</span>
+<span class="n">min_area_th_empty</span> <span class="o">=</span> <span class="mi">2000</span> 
+<span class="n">kernel_size_empty</span> <span class="o">=</span> <span class="mi">80</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># this makes the sparse df to an array with the spatial information </span>
+<span class="n">target_dict_total</span> <span class="o">=</span> <span class="p">{</span><span class="n">target</span><span class="p">:</span> <span class="n">index</span> <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())}</span>
+<span class="n">array_total</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">transform_df_to_array</span><span class="p">(</span><span class="n">df</span> <span class="o">=</span> <span class="n">df_total</span><span class="p">,</span> <span class="n">target_dict</span><span class="o">=</span><span class="n">target_dict_total</span><span class="p">,</span> <span class="n">array_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">target_dict_total</span><span class="p">)))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">)</span>
+
+<span class="c1"># creating subsets </span>
+<span class="n">df_subset_tum</span><span class="p">,</span> <span class="n">array_subset_tum</span><span class="p">,</span> <span class="n">target_indices_subset_tum</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">get_subset_arrays</span><span class="p">(</span><span class="n">df_total</span><span class="p">,</span> <span class="n">array_total</span><span class="p">,</span><span class="n">target_dict_total</span><span class="p">,</span>
+                                                                     <span class="n">target_list</span><span class="o">=</span><span class="n">target_tum</span><span class="p">,</span> <span class="n">target_col</span> <span class="o">=</span> <span class="s1">&#39;target&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>We are set to go! Lets get the contours:</p>
+<ul class="simple">
+<li><p>Contours for the cancer regions using the cancer trasncripts.</p></li>
+<li><p>Contours around the regions that have tissue (emptiness) using all the transcripts available.</p></li>
+</ul>
+<p>We will plot the results with the graphics available in GRIDGEN:</p>
+<ul class="simple">
+<li><p>contours scatter - where each transcript point of that region is blue and the contour is red.</p></li>
+<li><p>conv sum - plot with the convolutional sum image ( densities on each kernel).</p></li>
+</ul>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># obtain contours </span>
+<span class="n">CTum</span> <span class="o">=</span> <span class="n">contours</span><span class="o">.</span><span class="n">ConvolutionContours</span><span class="p">(</span><span class="n">array_subset_tum</span><span class="p">,</span> <span class="n">contour_name</span><span class="o">=</span><span class="s1">&#39;tum&#39;</span><span class="p">)</span>
+<span class="n">CTum</span><span class="o">.</span><span class="n">get_conv_sum</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size_tum</span><span class="p">,</span> <span class="n">kernel_shape</span><span class="o">=</span><span class="s1">&#39;square&#39;</span><span class="p">)</span>
+<span class="n">CTum</span><span class="o">.</span><span class="n">contours_from_sum</span><span class="p">(</span><span class="n">density_threshold</span> <span class="o">=</span> <span class="n">density_th_tum</span><span class="p">,</span>
+                       <span class="n">min_area_threshold</span> <span class="o">=</span> <span class="n">min_area_th_tum</span> <span class="p">,</span> <span class="n">directionality</span> <span class="o">=</span> <span class="s1">&#39;higher&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;==== tumour ====&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;total contours found &#39;</span><span class="p">,</span> <span class="n">CTum</span><span class="o">.</span><span class="n">total_valid_contours</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;total contours after filtering by area&#39;</span><span class="p">,</span> <span class="n">CTum</span><span class="o">.</span><span class="n">contours_filtered_area</span><span class="p">)</span>
+
+<span class="n">CEmpty</span> <span class="o">=</span> <span class="n">contours</span><span class="o">.</span><span class="n">ConvolutionContours</span><span class="p">(</span><span class="n">array_total</span><span class="p">,</span> <span class="n">contour_name</span><span class="o">=</span><span class="s1">&#39;empty&#39;</span><span class="p">)</span>
+<span class="n">CEmpty</span><span class="o">.</span><span class="n">get_conv_sum</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size_empty</span><span class="p">,</span> <span class="n">kernel_shape</span><span class="o">=</span><span class="s1">&#39;square&#39;</span><span class="p">)</span>
+<span class="n">CEmpty</span><span class="o">.</span><span class="n">contours_from_sum</span><span class="p">(</span><span class="n">density_threshold</span> <span class="o">=</span> <span class="n">density_th_empty</span><span class="p">,</span>
+                       <span class="n">min_area_threshold</span> <span class="o">=</span> <span class="n">min_area_th_empty</span><span class="p">,</span> <span class="n">directionality</span> <span class="o">=</span> <span class="s1">&#39;lower&#39;</span><span class="p">)</span> <span class="c1"># attention that directionality is lower here </span>
+
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;====&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;total contours found &#39;</span><span class="p">,</span> <span class="n">CEmpty</span><span class="o">.</span><span class="n">total_valid_contours</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;total contours after filtering by area&#39;</span><span class="p">,</span> <span class="n">CEmpty</span><span class="o">.</span><span class="n">contours_filtered_area</span><span class="p">)</span>
+
+<span class="c1"># PLOTs -- instead of plotting just with the function for example: CTum.plot_contours_scatter, we will make a composite image </span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+<span class="n">CTum</span><span class="o">.</span><span class="n">plot_contours_scatter</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                           <span class="n">c_points</span><span class="o">=</span> <span class="s1">&#39;blue&#39;</span><span class="p">,</span><span class="n">c_contours</span><span class="o">=</span> <span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Tum points and tum contours&#39;</span><span class="p">)</span>  
+
+
+<span class="n">CEmpty</span><span class="o">.</span><span class="n">plot_contours_scatter</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                           <span class="n">c_points</span><span class="o">=</span> <span class="s1">&#39;blue&#39;</span><span class="p">,</span><span class="n">c_contours</span><span class="o">=</span> <span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;total points and contours for empty&#39;</span><span class="p">)</span>  
+<span class="n">plt</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">wspace</span><span class="o">=</span><span class="mf">0.02</span><span class="p">)</span>  <span class="c1"># Adjust to your preference</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+   
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+
+<span class="n">CTum</span><span class="o">.</span><span class="n">plot_conv_sum</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;plasma&#39;</span><span class="p">,</span> <span class="n">c_countour</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Tum points and tum contours&#39;</span><span class="p">)</span>
+
+<span class="n">CEmpty</span><span class="o">.</span><span class="n">plot_conv_sum</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;plasma&#39;</span><span class="p">,</span> <span class="n">c_countour</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;total points and contours for empty&#39;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Function &#39;get_conv_sum&#39; took 0.5181 seconds to execute.
+Function &#39;contours_from_sum&#39; took 31.6562 seconds to execute.
+==== tumour ====
+total contours found  917
+total contours after filtering by area 35
+Function &#39;get_conv_sum&#39; took 7.3329 seconds to execute.
+Function &#39;contours_from_sum&#39; took 12.7785 seconds to execute.
+====
+total contours found  177
+total contours after filtering by area 35
+</pre></div>
+</div>
+<img alt="../_images/aeedc268af2c6d739730e2cc631ced2072b0e83ca1405a4d6de7c67bd20026d5.png" src="../_images/aeedc268af2c6d739730e2cc631ced2072b0e83ca1405a4d6de7c67bd20026d5.png" />
+<img alt="../_images/6dc43a763d26c396f016928892bfd10f211a48b883c7a060216a0f49535fa217.png" src="../_images/6dc43a763d26c396f016928892bfd10f211a48b883c7a060216a0f49535fa217.png" />
+</div>
+</div>
+<p>With the contours made. We can make the masks.
+cancer masks will be equivalent to the cancer contours.
+Stroma masks will be the total tissue contours without the cancer areas.</p>
+<p>Some operations can be done to get smoother masks. In the example below, holes in tumour masks are filled. This is optional.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#### obtain masks</span>
+<span class="n">GM</span> <span class="o">=</span> <span class="n">masks</span><span class="o">.</span><span class="n">GetMasks</span><span class="p">(</span><span class="n">image_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">))</span>
+
+<span class="n">mask_empty</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">create_mask</span><span class="p">(</span><span class="n">CEmpty</span><span class="o">.</span><span class="n">contours</span><span class="p">)</span>
+<span class="n">mask_tum</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">create_mask</span><span class="p">(</span><span class="n">CTum</span><span class="o">.</span><span class="n">contours</span><span class="p">)</span>
+<span class="n">mask_tum</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">fill_holes</span><span class="p">(</span><span class="n">mask_tum</span><span class="p">)</span>
+<span class="n">mask_stroma</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">subtract_masks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="n">mask_tum</span><span class="p">,</span> <span class="n">mask_empty</span><span class="p">)</span>          
+<span class="n">mask_stroma</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">filter_mask_by_area</span><span class="p">(</span><span class="n">mask_stroma</span><span class="p">,</span> <span class="n">min_area</span><span class="o">=</span><span class="mi">700</span><span class="p">)</span>
+
+<span class="c1"># general masks </span>
+<span class="n">GM</span><span class="o">.</span><span class="n">mask_S</span> <span class="o">=</span> <span class="n">mask_stroma</span>
+<span class="n">GM</span><span class="o">.</span><span class="n">mask_T</span> <span class="o">=</span> <span class="n">mask_tum</span>
+
+<span class="n">GM</span><span class="o">.</span><span class="n">plot_masks</span><span class="p">(</span><span class="n">masks</span><span class="o">=</span><span class="p">[</span><span class="n">GM</span><span class="o">.</span><span class="n">mask_S</span><span class="p">,</span> <span class="n">GM</span><span class="o">.</span><span class="n">mask_T</span><span class="p">],</span> <span class="n">mask_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Stroma&#39;</span><span class="p">,</span> <span class="s1">&#39;Tumour&#39;</span><span class="p">],</span>
+              <span class="n">background_color</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">mask_colors</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Stroma&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">65</span><span class="p">,</span> <span class="mi">105</span><span class="p">,</span> <span class="mi">225</span><span class="p">),</span> <span class="s1">&#39;Tumour&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">165</span><span class="p">,</span> <span class="mi">0</span><span class="p">)},</span>
+              <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/483255412924ba184c4baa01b33adaf5fcc49b989383238a44567012da744024.png" src="../_images/483255412924ba184c4baa01b33adaf5fcc49b989383238a44567012da744024.png" />
+</div>
+</div>
+<p>Just as an example, We will overlay this mask with the immunofluorescent image.
+In the IF image tumour is coloured with DAPI blue, cancer with red and the remaining memabranes with green. In yellow stroma contours and in white cancer contours.</p>
+<p>It’s pssible to see a very good overlap between regions. discrepancies may be due to problems in the imaging and the non complete alignment as the IF and the CosMx are made on consecutive slides.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mask1</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">mask_S</span>
+<span class="n">mask2</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">mask_T</span>
+<span class="n">image</span> <span class="o">=</span> <span class="n">tiff</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;composites/20230628_151317_S4_C902_P99_N99_F001_composite.tiff&#39;</span><span class="p">)</span>
+
+<span class="c1"># Calculate the padding needed on each side</span>
+<span class="n">pad_y</span> <span class="o">=</span> <span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">mask1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">//</span> <span class="mi">2</span>
+<span class="n">pad_x</span> <span class="o">=</span> <span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">mask1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">//</span> <span class="mi">2</span>
+
+<span class="c1"># Pad the mask with 5 pixels on each side to match the image size</span>
+<span class="c1"># Here, we assume a binary mask, so we pad with 0s</span>
+<span class="n">mask1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">mask1</span><span class="p">,</span> <span class="p">((</span><span class="n">pad_y</span><span class="p">,</span> <span class="n">pad_y</span><span class="p">),</span> <span class="p">(</span><span class="n">pad_x</span><span class="p">,</span> <span class="n">pad_x</span><span class="p">)),</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;constant&#39;</span><span class="p">,</span> <span class="n">constant_values</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">mask2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">mask2</span><span class="p">,</span> <span class="p">((</span><span class="n">pad_y</span><span class="p">,</span> <span class="n">pad_y</span><span class="p">),</span> <span class="p">(</span><span class="n">pad_x</span><span class="p">,</span> <span class="n">pad_x</span><span class="p">)),</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;constant&#39;</span><span class="p">,</span> <span class="n">constant_values</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># mask1 = np.flip(mask1, axis = 0) </span>
+<span class="n">mask1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">mask1</span><span class="p">)</span>
+<span class="n">mask2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">mask2</span><span class="p">)</span>
+<span class="n">image</span> <span class="o">=</span> <span class="p">(</span><span class="n">image</span> <span class="o">*</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+<span class="c1"># Create a copy of the image to overlay borders</span>
+<span class="n">image_with_contours</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+<span class="c1"># Find contours for each mask</span>
+<span class="n">contours1</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">findContours</span><span class="p">(</span><span class="n">mask1</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="n">cv2</span><span class="o">.</span><span class="n">RETR_EXTERNAL</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">CHAIN_APPROX_SIMPLE</span><span class="p">)</span>
+<span class="n">contours2</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">findContours</span><span class="p">(</span><span class="n">mask2</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="n">cv2</span><span class="o">.</span><span class="n">RETR_EXTERNAL</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">CHAIN_APPROX_SIMPLE</span><span class="p">)</span>
+
+<span class="c1"># Define colors for each mask&#39;s contours (Yellow for mask1, Cyan for mask2)</span>
+<span class="n">contour_color1</span> <span class="o">=</span> <span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># Yellow</span>
+<span class="n">contour_color2</span> <span class="o">=</span> <span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">)</span>  <span class="c1"># Cyan</span>
+
+<span class="c1"># Draw the contours on the image</span>
+<span class="n">cv2</span><span class="o">.</span><span class="n">drawContours</span><span class="p">(</span><span class="n">image_with_contours</span><span class="p">,</span> <span class="n">contours1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">contour_color1</span><span class="p">,</span> <span class="n">thickness</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">cv2</span><span class="o">.</span><span class="n">drawContours</span><span class="p">(</span><span class="n">image_with_contours</span><span class="p">,</span> <span class="n">contours2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">contour_color2</span><span class="p">,</span> <span class="n">thickness</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="c1"># Plot the image with contours</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>  <span class="c1"># Increase the figure size to make it larger</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">image_with_contours</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>  <span class="c1"># Hide axes for cleaner visualization</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/2ca256146595526a5971e336fce22a17275bdf04bc53d8737a2c10caf0a133ce.png" src="../_images/2ca256146595526a5971e336fce22a17275bdf04bc53d8737a2c10caf0a133ce.png" />
+</div>
+</div>
+<p>Finally, we can wrap the pipleine in a function and apply it to the full cohort.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">do_cosmx_pipeline</span><span class="p">(</span><span class="n">file_csv</span><span class="p">):</span>
+    <span class="n">df_total</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">file_csv</span><span class="p">)</span>
+    <span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;Y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">n_genes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+    <span class="n">height</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">width</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;Y&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># this makes the sparse df to an array with the spatial information </span>
+    <span class="n">target_dict_total</span> <span class="o">=</span> <span class="p">{</span><span class="n">target</span><span class="p">:</span> <span class="n">index</span> <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">df_total</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())}</span>
+    <span class="n">array_total</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">transform_df_to_array</span><span class="p">(</span><span class="n">df</span> <span class="o">=</span> <span class="n">df_total</span><span class="p">,</span> <span class="n">target_dict</span><span class="o">=</span><span class="n">target_dict_total</span><span class="p">,</span> <span class="n">array_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">target_dict_total</span><span class="p">)))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">)</span>
+    
+    <span class="c1"># creating subsets </span>
+    <span class="n">df_subset_tum</span><span class="p">,</span> <span class="n">array_subset_tum</span><span class="p">,</span> <span class="n">target_indices_subset_tum</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">get_subset_arrays</span><span class="p">(</span><span class="n">df_total</span><span class="p">,</span> <span class="n">array_total</span><span class="p">,</span><span class="n">target_dict_total</span><span class="p">,</span>
+                                                                         <span class="n">target_list</span><span class="o">=</span><span class="n">target_tum</span><span class="p">,</span> <span class="n">target_col</span> <span class="o">=</span> <span class="s1">&#39;target&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># obtain contours </span>
+    <span class="n">CTum</span> <span class="o">=</span> <span class="n">contours</span><span class="o">.</span><span class="n">ConvolutionContours</span><span class="p">(</span><span class="n">array_subset_tum</span><span class="p">,</span> <span class="n">contour_name</span><span class="o">=</span><span class="s1">&#39;tum&#39;</span><span class="p">)</span>
+    <span class="n">CTum</span><span class="o">.</span><span class="n">get_conv_sum</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size_tum</span><span class="p">,</span> <span class="n">kernel_shape</span><span class="o">=</span><span class="s1">&#39;square&#39;</span><span class="p">)</span>
+    <span class="n">CTum</span><span class="o">.</span><span class="n">contours_from_sum</span><span class="p">(</span><span class="n">density_threshold</span> <span class="o">=</span> <span class="n">density_th_tum</span><span class="p">,</span>
+                           <span class="n">min_area_threshold</span> <span class="o">=</span> <span class="n">min_area_th_tum</span> <span class="p">,</span> <span class="n">directionality</span> <span class="o">=</span> <span class="s1">&#39;higher&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;==== tumour ====&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;total contours found &#39;</span><span class="p">,</span> <span class="n">CTum</span><span class="o">.</span><span class="n">total_valid_contours</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;total contours after filtering by area&#39;</span><span class="p">,</span> <span class="n">CTum</span><span class="o">.</span><span class="n">contours_filtered_area</span><span class="p">)</span>
+    
+    <span class="n">CEmpty</span> <span class="o">=</span> <span class="n">contours</span><span class="o">.</span><span class="n">ConvolutionContours</span><span class="p">(</span><span class="n">array_total</span><span class="p">,</span> <span class="n">contour_name</span><span class="o">=</span><span class="s1">&#39;empty&#39;</span><span class="p">)</span>
+    <span class="n">CEmpty</span><span class="o">.</span><span class="n">get_conv_sum</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size_empty</span><span class="p">,</span> <span class="n">kernel_shape</span><span class="o">=</span><span class="s1">&#39;square&#39;</span><span class="p">)</span>
+    <span class="n">CEmpty</span><span class="o">.</span><span class="n">contours_from_sum</span><span class="p">(</span><span class="n">density_threshold</span> <span class="o">=</span> <span class="n">density_th_empty</span><span class="p">,</span>
+                           <span class="n">min_area_threshold</span> <span class="o">=</span> <span class="n">min_area_th_empty</span><span class="p">,</span> <span class="n">directionality</span> <span class="o">=</span> <span class="s1">&#39;lower&#39;</span><span class="p">)</span> <span class="c1"># attention that directionality is lower here </span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;====&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;total contours found &#39;</span><span class="p">,</span> <span class="n">CEmpty</span><span class="o">.</span><span class="n">total_valid_contours</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;total contours after filtering by area&#39;</span><span class="p">,</span> <span class="n">CEmpty</span><span class="o">.</span><span class="n">contours_filtered_area</span><span class="p">)</span>
+
+    
+    <span class="c1"># PLOTs -- instead of plotting just with the function for example: CTum.plot_contours_scatter, we will make a composite image </span>
+    
+    <span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+    <span class="n">CTum</span><span class="o">.</span><span class="n">plot_contours_scatter</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                               <span class="n">c_points</span><span class="o">=</span> <span class="s1">&#39;blue&#39;</span><span class="p">,</span><span class="n">c_contours</span><span class="o">=</span> <span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Tum points and tum contours&#39;</span><span class="p">)</span>  
+    
+    
+    <span class="n">CEmpty</span><span class="o">.</span><span class="n">plot_contours_scatter</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                               <span class="n">c_points</span><span class="o">=</span> <span class="s1">&#39;blue&#39;</span><span class="p">,</span><span class="n">c_contours</span><span class="o">=</span> <span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;total points and contours for empty&#39;</span><span class="p">)</span>  
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">wspace</span><span class="o">=</span><span class="mf">0.02</span><span class="p">)</span>  <span class="c1"># Adjust to your preference</span>
+    
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    
+    <span class="c1">#### obtain masks</span>
+    <span class="n">GM</span> <span class="o">=</span> <span class="n">masks</span><span class="o">.</span><span class="n">GetMasks</span><span class="p">(</span><span class="n">image_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">))</span>
+    
+    <span class="n">mask_empty</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">create_mask</span><span class="p">(</span><span class="n">CEmpty</span><span class="o">.</span><span class="n">contours</span><span class="p">)</span>
+    <span class="n">mask_tum</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">create_mask</span><span class="p">(</span><span class="n">CTum</span><span class="o">.</span><span class="n">contours</span><span class="p">)</span>
+    <span class="n">mask_tum</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">fill_holes</span><span class="p">(</span><span class="n">mask_tum</span><span class="p">)</span>
+    <span class="n">mask_stroma</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">subtract_masks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="n">mask_tum</span><span class="p">,</span> <span class="n">mask_empty</span><span class="p">)</span>          
+    <span class="n">mask_stroma</span> <span class="o">=</span> <span class="n">GM</span><span class="o">.</span><span class="n">filter_mask_by_area</span><span class="p">(</span><span class="n">mask_stroma</span><span class="p">,</span> <span class="n">min_area</span><span class="o">=</span><span class="mi">700</span><span class="p">)</span>
+    
+    <span class="c1"># general masks </span>
+    <span class="n">GM</span><span class="o">.</span><span class="n">mask_S</span> <span class="o">=</span> <span class="n">mask_stroma</span>
+    <span class="n">GM</span><span class="o">.</span><span class="n">mask_T</span> <span class="o">=</span> <span class="n">mask_tum</span>
+    
+    <span class="n">GM</span><span class="o">.</span><span class="n">plot_masks</span><span class="p">(</span><span class="n">masks</span><span class="o">=</span><span class="p">[</span><span class="n">GM</span><span class="o">.</span><span class="n">mask_S</span><span class="p">,</span> <span class="n">GM</span><span class="o">.</span><span class="n">mask_T</span><span class="p">],</span> <span class="n">mask_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Stroma&#39;</span><span class="p">,</span> <span class="s1">&#39;Tumour&#39;</span><span class="p">],</span>
+                  <span class="n">background_color</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">mask_colors</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Stroma&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">65</span><span class="p">,</span> <span class="mi">105</span><span class="p">,</span> <span class="mi">225</span><span class="p">),</span> <span class="s1">&#39;Tumour&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">165</span><span class="p">,</span> <span class="mi">0</span><span class="p">)},</span>
+                  <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%time</span>
+<span class="k">for</span> <span class="n">file_csv</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">files_names</span><span class="p">[:</span><span class="mi">10</span><span class="p">]):</span>
+    <span class="n">do_cosmx_pipeline</span><span class="p">(</span><span class="n">file_csv</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>  0%|                                                                                                                                                        | 0/10 [00:00&lt;?, ?it/s]
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="cancer_stroma_interface_xenium.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Analysis of Cancer Stroma Interface in Xenium</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="Derive_cancer_stroma_Xenium.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Derive cancer and stroma masks in Xenium data</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Derive cancer and stroma masks in CosMx data</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#cosmx-data">Cosmx Data</a></li>
+</ul>
+
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/case_studies/Derive_cancer_stroma_CosMx.ipynb.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, AM Sequeira.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.3.7.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
