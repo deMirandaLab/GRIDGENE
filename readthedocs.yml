@@ -1,0 +1,20 @@
+# .readthedocs.yaml
+# Required
+version: 2
+
+# Build documentation in the docs/ directory with Sphinx
+sphinx:
+  configuration: docs/source/conf.py
+
+# Set the Python version
+python:
+  version: 3.11  # Match your local Python version or a compatible one
+  # Install your project dependencies with pip
+  install:
+    - method: pip
+      path: .  # This tells ReadTheDocs to pip install from the project root
+               # For a 'src' layout where 'src' is the package, 'path: .'
+               # or 'path: src' might be needed depending on your exact setup.
+               # Let's try 'path: .' first.
+      extra_requirements:
+        - docs # If you have a 'docs' extra in your setup.py/pyproject.toml
