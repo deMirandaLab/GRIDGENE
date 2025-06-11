@@ -9,9 +9,10 @@ build:
   tools:
     python: "3.10"
   commands:
-    # Removed: - pip install .[docs]  <-- This line caused the error
-    - pip install -r docs/requirements.txt # <--- Keep this line, it's correct
-    - sphinx-build -b html docs/source docs/_build/html # <--- ADD THIS LINE
+    - pip install -r docs/requirements.txt
+    - sphinx-build -b html docs/source docs/_build/html # This command creates HTML in docs/_build/html
+  output: docs/_build/html # <--- ADD THIS LINE to tell ReadTheDocs where to find the output HTML.
+                           # This path is relative to the repository root.
 
 sphinx:
   configuration: docs/source/conf.py
