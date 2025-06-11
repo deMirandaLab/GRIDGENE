@@ -10,9 +10,9 @@ build:
     python: "3.10"
   commands:
     - pip install -r docs/requirements.txt
-    - sphinx-build -b html docs/source docs/_build/html # This command creates HTML in docs/_build/html
-  output: docs/_build/html # <--- ADD THIS LINE to tell ReadTheDocs where to find the output HTML.
-                           # This path is relative to the repository root.
+    # CHANGE THIS LINE: Direct Sphinx to output to _readthedocs/html
+    # This is the path ReadTheDocs expects for the final HTML when using `commands`.
+    - sphinx-build -b html docs/source _readthedocs/html # <--- MODIFIED LINE
 
 sphinx:
   configuration: docs/source/conf.py
