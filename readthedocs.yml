@@ -11,6 +11,7 @@ build:
   commands:
     # Removed: - pip install .[docs]  <-- This line caused the error
     - pip install -r docs/requirements.txt # <--- Keep this line, it's correct
+    - sphinx-build -b html docs/source docs/_build/html # <--- ADD THIS LINE
 
 sphinx:
   configuration: docs/source/conf.py
