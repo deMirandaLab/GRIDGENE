@@ -14,12 +14,3 @@ build:
 
 sphinx:
   configuration: docs/source/conf.py
-
-# Optional: Set the Python path (for autodoc)
-python:
-  install:
-    - requirements: docs/requirements.txt
-      method: pip
-      path: . # This path is relative to the repository root.
-              # It means your project root will be added to Python's path.
-              # This might be useful for autodoc to find your 'src' folder if not already handled by conf.py.
