@@ -9,22 +9,22 @@ from scipy.ndimage import convolve1d
 from scipy.spatial import ConvexHull
 import alphashape
 from shapely.geometry import Polygon
-
 import time
-
+from scipy.spatial import KDTree
+from sklearn.cluster import DBSCAN
+from gridgen.logger import get_logger
+from typing import Optional, Tuple, Dict, Any, List
+from matplotlib.axes import Axes
+from functools import wraps
 
 def timeit(func):
-    """
-    A decorator to measure the execution time of a function.
-    """
-
+    @wraps(func)
     def wrapper(*args, **kwargs):
-        start_time = time.time()
+        start = time.time()
         result = func(*args, **kwargs)
-        end_time = time.time()
-        print(f"Function '{func.__name__}' took {end_time - start_time:.4f} seconds to execute.")
+        end = time.time()
+        print(f"{func.__name__} took {end - start:.4f} seconds")
         return result
-
     return wrapper
 
 
@@ -94,38 +94,41 @@ class GetContour():
         self.contour_name = contour_name
         self.total_valid_contours = 0
         self.contours_filtered_area = 0
-        self.logger = logger or self._default_logger()
-
-    def _default_logger(self):
-        logging.basicConfig(level=logging.INFO)
-        return logging.getLogger(__name__)
-
-        # if logger is None:
-        #     # Configure default logger if none is provided
-        #     logging.basicConfig(level=logging.INFO)
-        #     self.logger = logging.getLogger(__name__)
-        # else:
-        #     self.logger = logger
+        self.logger = logger or get_logger(f'{__name__}.{contour_name or "GetContour"}')
+        self.logger.info("Initialized GetContour")
 
     #############################
-    # other filtering of contours
+    # Filtering of contours
 
-    def check_contours(self):
+    def check_contours(self) -> None:
         """
-        Checks and processes the contours to ensure they are valid.
-        Excludes contours with less than 3 points and ensures contours are closed.
+        Validate and process contours.
+
+        - Excludes contours with fewer than 3 points.
+        - Ensures contours are closed (first point == last point).
+        - Converts contours to np.ndarray of dtype int32 for OpenCV compatibility.
+
+        Returns
+        -------
+        None
         """
 
-        # exclude contours with less than 3 points
-        self.contours = [np.squeeze(contour).astype(np.int32) for contour in self.contours if len(contour) > 2]
-        # add the last coordinate to the list if the contour is not closed
-        self.contours = [np.vstack([contour, contour[0]]) if contour[0].tolist() != contour[-1].tolist() else contour
-                         for
-                         contour in self.contours]
-        # transform to np int 32 to compatibility with opencv
-        self.contours = [np.array(contour, dtype=np.int32) for contour in self.contours]
+        if not self.contours:
+            self.logger.info("No contours to check.")
+            return
 
-    def filter_contours_area(self, min_area_threshold):
+        filtered_and_closed_contours = []
+        for contour in self.contours:
+            squeezed = np.squeeze(contour)
+            if squeezed.ndim != 2 or squeezed.shape[0] < 3 or squeezed.shape[1] < 2:
+                continue
+            if not np.array_equal(squeezed[0], squeezed[-1]):
+                squeezed = np.vstack([squeezed, squeezed[0]])
+            filtered_and_closed_contours.append(squeezed.astype(np.int32))
+
+        self.contours = filtered_and_closed_contours
+
+    def filter_contours_area(self, min_area_threshold: float) -> None:
         """
         Filters contours based on a minimum area threshold.
 
@@ -135,9 +138,10 @@ class GetContour():
             Minimum area threshold for filtering contours.
         """
         self.contours = [contour for contour in self.contours if cv2.contourArea(contour) >= min_area_threshold]
-        self.contours_filtered_area = len(self.contours)
+        # self.contours_filtered_area = len(self.contours)
+        self.logger.info(f'Number of contours after area filtering: {len(self.contours)}')
 
-    def filter_contours_no_counts(self):
+    def filter_contours_no_counts(self) -> List[np.ndarray]:
         """
         Filters contours that have no counts in the given array.
 
@@ -150,17 +154,6 @@ class GetContour():
             The list of valid contours that have counts.
         """
         # todo check what is more efficient
-
-        # array2d = np.sum(self.array_to_contour, axis=2)
-        # # Iterate through contours andeliminate those without points inside
-        # valid_contours = []
-        # for contour in contours:
-        #     mask_ = np.zeros_like(array2d, dtype=np.uint8)
-        #     cv2.drawContours(mask_, [contour], -1, 1, thickness=cv2.FILLED)
-        #     sum = np.sum(array2d * mask_, axis=(0, 1)).astype(np.int16)
-        #     if sum>0:
-        #         valid_contours.append(contour)
-
         array2d = np.sum(self.array, axis=2)
         valid_contours = []
 
@@ -169,53 +162,66 @@ class GetContour():
         # Multiply once to get the masked array
         masked_array2d = array2d * mask_all
 
-        # for contour in self.contours:
-        #     mask_ = np.zeros_like(array2d, dtype=np.uint8)
-        #     cv2.drawContours(mask_, [contour], -1, 1, thickness=cv2.FILLED)
-        #
-        #     # Use the precomputed masked_array2d to check for valid contours
-        #     if np.sum(masked_array2d * mask_) > 0:
-        #         valid_contours.append(contour)
-        # self.contours = valid_contours
-        # Keep only contours that have non-zero counts in the masked array
-        valid_contours = [
-            contour for contour in self.contours
-            if np.sum(cv2.drawContours(
-                np.zeros_like(array2d, dtype=np.uint8), [contour], -1, 1, thickness=cv2.FILLED) * masked_array2d) > 0
-        ]
-
-        self.contours = valid_contours
-
-        return self.contours
-
-    def filter_contours_no_counts_and_area(self, min_area_threshold):
-        """
-        Filters contours that have no counts in the given array and are smaller than the minimum area threshold.
-        """
-        array2d = np.sum(self.array, axis=2)
-
-        # Create a combined mask for all contours
-        mask_all = np.zeros_like(array2d, dtype=np.uint8)
-        cv2.drawContours(mask_all, self.contours, -1, 1, thickness=cv2.FILLED)
-
-        # Multiply the array with the combined mask
-        masked_array2d = array2d * mask_all
-
-        valid_contours = []
+        # valid_contours = [
+        #     contour for contour in self.contours
+        #     if np.sum(cv2.drawContours(
+        #         np.zeros_like(array2d, dtype=np.uint8), [contour], -1, 1, thickness=cv2.FILLED) * masked_array2d) > 0
+        # ]
         for contour in self.contours:
-            # Compute area of the contour
-            area = cv2.contourArea(contour)
+            x, y, w, h = cv2.boundingRect(contour)  # bounding box of contour
+            roi = array2d[y:y + h, x:x + w]  # region of interest in array2d
 
-            # Check if it has non-zero counts and meets the area threshold
-            mask_ = np.zeros_like(array2d, dtype=np.uint8)
-            cv2.drawContours(mask_, [contour], -1, 1, thickness=cv2.FILLED)
-            if np.sum(masked_array2d * mask_) > 0 and area >= min_area_threshold:
+            mask = np.zeros((h, w), dtype=np.uint8)
+            # Shift contour points to roi coords
+            shifted_contour = contour - [x, y]
+            cv2.drawContours(mask, [shifted_contour], -1, 1, thickness=cv2.FILLED)
+
+            if np.sum(roi * mask) > 0:
                 valid_contours.append(contour)
 
         self.contours = valid_contours
-        self.contours_filtered_area = len(self.contours)
+        self.logger.info(f'Number of contours after filtering no counts: {len(self.contours)}')
+        return self.contours
 
-    def filter_contours_by_gene_threshold(self, gene_array, threshold, gene_name=""):
+    def filter_contours_no_counts_and_area(self, min_area_threshold: float) -> List[np.ndarray]:
+        """
+        Filters contours that have no counts in the given array and are smaller than the minimum area threshold.
+
+        Returns
+        -------
+        List[np.ndarray]
+            The list of contours with counts and meeting area threshold.
+        """
+        array2d = np.sum(self.array, axis=2)
+
+        valid_contours = []
+
+        for contour in self.contours:
+            area = cv2.contourArea(contour)
+            if area < min_area_threshold:
+                continue
+
+            x, y, w, h = cv2.boundingRect(contour)
+            roi = array2d[y:y + h, x:x + w]
+
+            mask = np.zeros((h, w), dtype=np.uint8)
+            shifted_contour = contour - [x, y]
+            cv2.drawContours(mask, [shifted_contour], -1, 1, thickness=cv2.FILLED)
+
+            if np.sum(roi * mask) > 0:
+                valid_contours.append(contour)
+
+        self.contours = valid_contours
+        # self.contours_filtered_area = len(self.contours)
+        self.logger.info(f'Number of contours after filtering no counts: {len(self.contours)}')
+        return self.contours
+
+    def filter_contours_by_gene_threshold(
+            self,
+            gene_array: np.ndarray,
+            threshold: float,
+            gene_name: Optional[str] = ""
+    ) -> None:
         """
         Filters contours based on a gene count threshold.
 
@@ -249,7 +255,13 @@ class GetContour():
         self.contours = valid_contours
         self.logger.info(f'Number of contours remaining: {len(valid_contours)}')
 
-    def filter_contours_by_gene_comparison(self, gene_array1, gene_array2, gene_name1="", gene_name2=""):
+    def filter_contours_by_gene_comparison(
+            self,
+            gene_array1: np.ndarray,
+            gene_array2: np.ndarray,
+            gene_name1: Optional[str] = "",
+            gene_name2: Optional[str] = ""
+    ) -> None:
         """
         Filters contours based on the comparison of gene counts between two gene arrays.
 
@@ -273,29 +285,45 @@ class GetContour():
         None
             The method updates the `self.contours` attribute with the valid contours.
         """
+        # Ensure arrays are 2D by summing if needed
+        if gene_array1.ndim == 3:
+            gene_array1 = np.sum(gene_array1, axis=-1)
+        if gene_array2.ndim == 3:
+            gene_array2 = np.sum(gene_array2, axis=-1)
 
+        height, width = gene_array1.shape
         valid_contours = []
         for i, contour in enumerate(self.contours):
             mask_ = np.zeros((gene_array1.shape[0], gene_array1.shape[1]), dtype=np.uint8)
             cv2.drawContours(mask_, [contour], -1, 1, thickness=cv2.FILLED)
-            if gene_array1.ndim > 2:
-                gene_array1 = np.sum(gene_array1, axis=-1)
-            if gene_array2.ndim > 2:
-                gene_array2 = np.sum(gene_array2, axis=-1)
-
             gene_count1 = np.sum(gene_array1 * mask_)
             gene_count2 = np.sum(gene_array2 * mask_)
             if gene_count1 > gene_count2:
                 valid_contours.append(contour)
             else:
                 self.logger.info(
-                    f'Excluding contour {i}. Gene {gene_name1} count {gene_count1} is not greater than gene {gene_name2} count {gene_count2}')
+                    f'Excluding contour {i}. '
+                    f'{gene_name1 or "Gene1"} count {gene_count1:.2f} '
+                    f'≤ {gene_name2 or "Gene2"} count {gene_count2:.2f}'
+                )
         self.contours = valid_contours
-        self.logger.info(f'Number of contours remaining: {len(valid_contours)}')
+        self.logger.info(f'Contours remaining after gene comparison: {len(valid_contours)}')
 
-    def plot_contours_scatter(self, path=None, show=False, s=0.1, alpha=0.5, linewidth=1,
-                              c_points='blue', c_contours='red',
-                              figsize=(10, 10), ax=None, **kwargs):
+
+    # Plotting
+    def plot_contours_scatter(
+            self,
+            path: Optional[str] = None,
+            show: bool = False,
+            s: float = 0.1,
+            alpha: float = 0.5,
+            linewidth: float = 1,
+            c_points: str = 'blue',
+            c_contours: str = 'red',
+            figsize: Tuple[int, int] = (10, 10),
+            ax: Optional[Axes] = None,
+            **kwargs: Dict[str, Any]
+    ) -> Axes:
         """
         Plot scatter plot with contours.
 
@@ -338,7 +366,15 @@ class GetContour():
 
         return ax
 
-    def plot_conv_sum(self, cmap='plasma', c_countour='white', path=None, show=False, figsize=(10, 10), ax=None):
+    def plot_conv_sum(
+            self,
+            cmap: str = 'plasma',
+            c_countour: str = 'white',
+            path: Optional[str] = None,
+            show: bool = False,
+            figsize: Tuple[int, int] = (10, 10),
+            ax: Optional[Axes] = None
+    ) -> Axes:
         """
         Plot the convolution sum image with contours.
 
@@ -385,162 +421,17 @@ class GetContour():
 
 class ConvolutionContours(GetContour):
     """
-    Subclass for convolution-based contour generation with condition handling.
-    """
-
-    def __init__(self, array_to_contour, logger=None, contour_name=None, gene_names=None):
-        """
-        Initialize the ConvolutionContours class.
-
-        Parameters
-        ----------
-        array_to_contour : ndarray
-            The input array for contour generation.
-        logger : logging.Logger, optional
-            Logger for the class.
-        contour_name : str, optional
-            Name of the contour set.
-        gene_names : list of str
-            List of gene names corresponding to the dimensions of the array.
-        """
-        super().__init__(array_to_contour, logger, contour_name)
-        self.local_sum_image = None
-        self.gene_names = gene_names  # Add gene names as an attribute
-
-    def _gene_index(self, gene_name):
-        """
-        Helper function to find the index of a gene in the array's third dimension.
-
-        Parameters
-        ----------
-        gene_name : str
-            Name of the gene to find.
-
-        Returns
-        -------
-        int
-            Index of the gene.
-        """
-        if self.gene_names is None:
-            raise ValueError("gene_names attribute is not set.")
-        try:
-            return self.gene_names.index(gene_name)
-        except ValueError:
-            raise ValueError(f"Gene '{gene_name}' not found in gene_names list.")
-
-    @timeit
-    def get_conv_sum(self, kernel_size, kernel_shape='square'):
-        """
-        Computes the convolution sum of the array.
-
-        Parameters
-        ----------
-        kernel_size : int
-            Size of the kernel to be used for convolution.
-        kernel_shape : str, optional
-            Shape of the kernel ('square' or 'circle'), by default 'square'.
-        """
-        kernel = np.ones((kernel_size, kernel_size))
-        if kernel_shape == 'circle':
-            diameter = kernel_size
-            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (diameter, diameter))
-
-        array_sum = np.sum(self.array, axis=2)
-        self.local_sum_image = cv2.filter2D(array_sum, -1, kernel)
-
-    def apply_conditioned_convolution(self, gene_conditions, kernel_size, kernel_shape='square', gene_names=None):
-        """
-        Applies an additional convolution step based on the gene conditions.
-
-        Parameters
-        ----------
-        gene_conditions : dict
-            Conditions specifying groups of genes to consider for overlap.
-        kernel_size : int
-            Size of the kernel to be used for convolution.
-        kernel_shape : str, optional
-            Shape of the kernel ('square' or 'circle'), by default 'square'.
-
-        Returns
-        -------
-        ndarray
-            Refined convolution sum image where only kernels meeting the conditions are considered.
-        """
-        if self.gene_names is None and gene_names is None:
-            raise ValueError("gene_names is required for gene-specific operations.")
-        elif gene_names:
-            self.gene_names = gene_names
-
-        # Create binary masks for group1 and group2
-        group1_mask = np.logical_or.reduce(
-            [self.array[..., self._gene_index(gene)] > 0 for gene in gene_conditions["group1"]]
-        )
-        group2_mask = np.logical_or.reduce(
-            [self.array[..., self._gene_index(gene)] > 0 for gene in gene_conditions["group2"]]
-        )
-
-        # Kernel definition
-        kernel = np.ones((kernel_size, kernel_size))
-        if kernel_shape == 'circle':
-            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
-
-        # Convolve each binary mask
-        conv_group1 = cv2.filter2D(group1_mask.astype(np.uint8), -1, kernel)
-        conv_group2 = cv2.filter2D(group2_mask.astype(np.uint8), -1, kernel)
-
-        # Combined condition: at least one from each group in the kernel area
-        condition_met = (conv_group1 > 0) & (conv_group2 > 0)
-
-        # Apply the condition to the existing convolution sum
-        self.local_sum_image = self.local_sum_image * condition_met
-
-
-    @timeit
-    def contours_from_sum(self, density_threshold, min_area_threshold, directionality='higher'):
-        """
-        Extracts contours from the local sum image based on a density threshold and filters by area.
-
-        Parameters
-        ----------
-        density_threshold : float
-            Density threshold for extracting contours.
-        min_area_threshold : float
-            Minimum area threshold for filtering contours.
-        directionality : str, optional
-            Directionality for finding contours ('higher' or 'lower'), by default 'higher'.
-        """
-
-        # Find contours based on directionality
-        if directionality == 'higher':
-            self.contours, _ = cv2.findContours((self.local_sum_image > density_threshold).astype(np.uint8),
-                                                cv2.RETR_LIST,
-                                                cv2.CHAIN_APPROX_SIMPLE)
-        elif directionality == 'lower':
-            self.contours, _ = cv2.findContours((self.local_sum_image < density_threshold).astype(np.uint8),
-                                                cv2.RETR_LIST,
-                                                cv2.CHAIN_APPROX_SIMPLE)
-        else:
-            self.logger.error('Directionality must be "lower" or "higher".')
-            return
-
-        # Filter contours based on the area threshold
-        self.contours = [cnt for cnt in self.contours if cv2.contourArea(cnt) >= min_area_threshold]
-
-
-# todo check this new class with the new contou generation
-class ConvolutionContours(GetContour):
-    """
     Subclass for convolution-based contour generation.
     """
 
-    def __init__(self, array_to_contour, logger=None, contour_name=None):
+    def __init__(self, array_to_contour: np.ndarray, logger=None, contour_name: Optional[str] = None):
         # Initialize parent class attributes
         super().__init__(array_to_contour, logger, contour_name)
         # Initialize subclass-specific attributes
-        self.local_sum_image = None
+        self.local_sum_image: Optional[np.ndarray] = None
 
     @timeit
-    def get_conv_sum(self, kernel_size, kernel_shape='square'):
+    def get_conv_sum(self, kernel_size: int, kernel_shape: str = 'square') -> None:
         """
         Computes the convolution sum of the array with a specified kernel.
 
@@ -551,24 +442,23 @@ class ConvolutionContours(GetContour):
         kernel_shape : str, optional
             Shape of the kernel ('square' or 'circle'), by default 'square'.
         """
+        if kernel_shape not in {'square', 'circle'}:
+            raise ValueError("kernel_shape must be either 'square' or 'circle'.")
 
-        kernel = np.ones((kernel_size, kernel_size))
-        if kernel_shape == 'circle':
-            diameter = kernel_size
-            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (diameter, diameter))
+        kernel = (np.ones((kernel_size, kernel_size), dtype=np.float32)
+                  if kernel_shape == 'square'
+                  else cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size)))
+
         array_sum = np.sum(self.array, axis=2)
-        # self.local_sum_image = cv2.filter2D(np.sum(self.array, axis=2), -1, kernel)
-        self.local_sum_image = cv2.filter2D(array_sum, -1, kernel)
-        # self.local_sum_image = convolve2d(array_sum, kernel, mode='same', boundary='fill', fillvalue=0)
-        # self.local_sum_image = convolve2d(array_sum, kernel, mode='same', boundary='symm')
+        # self.local_sum_image = cv2.filter2D(array_sum, -1, kernel)
+        self.local_sum_image = cv2.filter2D(array_sum, -1, kernel, borderType=cv2.BORDER_REFLECT_101)
+
         del array_sum
 
-
-
-
-
     @timeit
-    def contours_from_sum(self, density_threshold, min_area_threshold, directionality='higher'):
+    def contours_from_sum(
+            self, density_threshold: float, min_area_threshold: float,
+            directionality: str = 'higher') -> None:
         """
        Extracts contours from the local sum image based on a density threshold and filters them by area.
 
@@ -581,33 +471,25 @@ class ConvolutionContours(GetContour):
        directionality : str, optional
            Directionality for finding contours ('higher' or 'lower'), by default 'higher'.
        """
-        # Find contours coordinates   - based on sopencv
+        if self.local_sum_image is None:
+            raise RuntimeError("local_sum_image is not computed. Run get_conv_sum() first.")
+
         if directionality == 'higher':
-            self.contours, _ = cv2.findContours((self.local_sum_image > density_threshold).astype(np.uint8),
-                                                cv2.RETR_LIST,
-                                                cv2.CHAIN_APPROX_SIMPLE)
+            binary_mask = (self.local_sum_image > density_threshold).astype(np.uint8)
         elif directionality == 'lower':
-            self.contours, _ = cv2.findContours((self.local_sum_image < density_threshold).astype(np.uint8),
-                                                cv2.RETR_LIST,
-                                                cv2.CHAIN_APPROX_SIMPLE)
+            binary_mask = (self.local_sum_image < density_threshold).astype(np.uint8)
         else:
-            self.logger.error('directionality can only be -- lower -- for find contours of areas with lower'
-                              'density or -- higher -- to find contours of areas with higher density')
-            return
+            raise ValueError("directionality must be either 'higher' or 'lower'.")
+
+        contours, _ = cv2.findContours(binary_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        self.contours = contours
 
         self.check_contours()
-        self.total_valid_contours = len(self.contours)
-
-        # self.filter_contours_no_counts()
-        # self.filter_contours_area(min_area_threshold)
         self.filter_contours_no_counts_and_area(min_area_threshold)
-        # todo does this add a lot of time. why are ontours that are zero counts. check contour displacement
+        # self.logger.info(f'Contours extracted from sum after checks: {len(self.contours)}')
 
 
-from scipy.spatial import KDTree
-from sklearn.cluster import DBSCAN
-
-
+######## TODO testing and cleaning here.
 class KDTreeContours(GetContour):
 
     def __init__(self, kd_tree_data, logger=None, contour_name=None):
@@ -654,11 +536,11 @@ class KDTreeContours(GetContour):
             self.points_w_neig = self.points_w_neig[:, :2]
 
         if len(filtered_points) == 0:
-            logging.WARNING("No points with neighbors found within the given radius.")
+            self.logger.WARNING("No points with neighbors found within the given radius.")
 
     def label_points_with_neigbors(self):
         # eps = 60  # Search radius (similar to the one used in KDTree)
-        min_samples = max(self.min_neighbours,2)   # Minimum number of points in a cluster
+        min_samples = max(self.min_neighbours, 2)  # Minimum number of points in a cluster
         # is going to be min_neighboors, or in case is 1, 2
 
         # Extract only the first two dimensions (x, y) if the points are in 3D
@@ -700,7 +582,6 @@ class KDTreeContours(GetContour):
         self.logger.info("N contours: %d", len(self.contours))
 
         del contours_list
-
 
     def contours_from_kd_tree_concave_hull(self, alpha=0.1):
         """
@@ -747,7 +628,7 @@ class KDTreeContours(GetContour):
         self.logger.info("Generated %d concave hull contours", len(self.contours))
 
     def contours_from_kd_tree_complex_hull(self):
-        #todo not working properly
+        # todo not working properly
         contours_list = []
         unique_labels = set(self.dbscan_labels)
 
@@ -781,7 +662,6 @@ class KDTreeContours(GetContour):
                 self.logger.error("Error processing cluster %d: %s", label, str(e))
                 continue
 
-
         self.contours = contours_list
         self.logger.info("N contours: %d", len(self.contours))
 
@@ -793,7 +673,7 @@ class KDTreeContours(GetContour):
         self.min_neighbours = min_neighbours  # number of neighboors of each point to be considered. > than.
         # FOr GD I just want 1 point
 
-        #1 find points that have neighboors in a radius of N pixels from the kd_tree_data
+        # 1 find points that have neighboors in a radius of N pixels from the kd_tree_data
         self.find_points_with_neighoors(radius, min_neighbours)
 
         # if self.points_w_neig.ndim == 3:
@@ -843,7 +723,7 @@ class KDTreeContours(GetContour):
         else:
             return plt
 
-    def plot_dbscan_labels(self, show = True, figsize=(8, 8)):
+    def plot_dbscan_labels(self, show=True, figsize=(8, 8)):
         """
         Plot points colored by DBSCAN labels.
 
@@ -878,4 +758,3 @@ class KDTreeContours(GetContour):
             plt.show()
         else:
             return plt
-
