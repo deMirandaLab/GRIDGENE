@@ -11,3 +11,4 @@ Welcome to the tutorials and getting started guide for GRIDGEN!
    ../case_studies/2_derive_cancer_stroma_Xenium.ipynb
    ../case_studies/3_kernel_size_influence.ipynb
    ../case_studies/4_cancer_stroma_interface_xenium.ipynb
+   ../case_studies/5_population_specific_objects_single.ipynb
