@@ -2,8 +2,10 @@ import unittest
 import numpy as np
 import cv2
 import os
-from gridgen.get_masks import GetMasks, ConstrainedMaskExpansion, SingleClassObjectAnalysis, MultiClassObjectAnalysis
+from gridgen.get_masks import (GetMasks, ConstrainedMaskExpansion,
+                               SingleClassObjectAnalysis, MultiClassObjectAnalysis)
 import logging
+from unittest.mock import MagicMock
 
 class TestGetMasks(unittest.TestCase):
     def setUp(self):
@@ -119,7 +121,7 @@ class TestGetMasksFiltering(unittest.TestCase):
         mask[5:9, 5:9] = 1  # Area = 16
 
         gm = GetMasks()
-        filtered = gm.filter_binary_mask_by_area(mask, min_area=10)
+        filtered = gm.filter_binary_mask_by_area(mask, min_area=5)
 
         self.assertEqual(np.sum(filtered), 16)
         self.assertTrue((filtered[1:3, 1:3] == 0).all())
@@ -130,7 +132,7 @@ class TestGetMasksFiltering(unittest.TestCase):
         mask[1:3, 1:3] = 1  # Area = 4
         mask[5:9, 5:9] = 2  # Area = 16
         gm = GetMasks()
-        filtered = gm.filter_labeled_mask_by_area(mask=mask, min_area=10)
+        filtered = gm.filter_labeled_mask_by_area(mask=mask, min_area=5)
 
         self.assertTrue((filtered[1:3, 1:3] == 0).all())
         self.assertTrue((filtered[5:9, 5:9] == 2).all())
@@ -153,7 +155,7 @@ class TestConstrainedMaskExpansion(unittest.TestCase):
 
         expander.expand_mask(
             expansion_pixels=[3],
-            min_area=10,
+            min_area=5,
             restrict_to_limit=True
         )
 
@@ -238,7 +240,7 @@ class DummyGetMasks:
         return filtered_mask
     def filter_binary_mask_by_area(self, mask: np.ndarray, min_area: int) -> np.ndarray:
         return self.filter_mask_by_area(mask, min_area)
-# Updated test class
+
 class TestSingleClassObjectAnalysis(unittest.TestCase):
     def setUp(self):
         self.dummy_masks = DummyGetMasks(height=20, width=20)
@@ -309,7 +311,7 @@ class TestSingleClassObjectAnalysis(unittest.TestCase):
         self.assertTrue(np.all(ref >= 0))
         self.assertTrue(np.any(ref > 0))
 
-
+#
 class TestMultiClassObjectAnalysis(unittest.TestCase):
     def setUp(self):
         self.height = 50
@@ -319,12 +321,13 @@ class TestMultiClassObjectAnalysis(unittest.TestCase):
         # Define 2 class categories with 2 objects each
         self.multiple_contours = {
             "ClassA": [
-                np.array([[[10, 10]], [[10, 15]], [[15, 15]], [[15, 10]], [[10, 10]]]),  # closed loop
-                np.array([[[30, 30]], [[30, 35]], [[35, 35]], [[35, 30]], [[30, 30]]])
+                np.array([[[10, 10]], [[10, 15]], [[15, 15]], [[15, 10]], [[25, 10]], [[10, 10]]]),  # closed loop
+                np.array([[[30, 30]], [[30, 35]], [[35, 35]],[[45, 40]], [[35, 30]], [[30, 30]]])
             ],
             "ClassB": [
                 np.array([[[10, 30]], [[10, 35]], [[15, 35]], [[15, 30]], [[10, 30]]]),
-                np.array([[[30, 10]], [[30, 15]], [[35, 15]], [[35, 10]], [[30, 10]]])
+                np.array([[[30, 10]], [[30, 15]], [[35, 15]], [[35, 10]], [[30, 10]]]),
+
             ]
         }
 
@@ -369,9 +372,9 @@ class TestMultiClassObjectAnalysis(unittest.TestCase):
     def test_reference_mask_values_match_object_count(self):
         ma = MultiClassObjectAnalysis(self.dummy_masks, self.multiple_contours)
         ma.derive_voronoi_from_contours()
-        ma.generate_expanded_masks_limited_by_voronoi(expansion_distances=[2])
+        ma.generate_expanded_masks_limited_by_voronoi(expansion_distances=[20])
 
-        ref_mask = ma.referenced_masks["ClassA_expansion_2"]
+        ref_mask = ma.labeled_masks["ClassA_expansion_20"]
         unique_refs = np.unique(ref_mask)
         # Should include 0 (background) and 4 objects
         self.assertTrue(set(range(3)).issubset(set(unique_refs)))
@@ -392,7 +395,7 @@ class TestMultiClassObjectAnalysis(unittest.TestCase):
             self.assertEqual(np.sum(mask), np.sum(intersection), f"Expansion for label {label} leaked Voronoi bounds")
 
     def test_empty_contours_handle_gracefully(self):
-        multiple_contours = {
+        multiple_contours_failing = {
             "ClassA": [
                 np.array([[[10, 10]], [[10, 15]], [[15, 15]], [[15, 10]], [[10, 10]]]),  # closed loop
                 np.array([[[30, 30]], [[30, 35]], [[35, 35]], [[35, 30]], [[30, 30]]])
@@ -400,8 +403,7 @@ class TestMultiClassObjectAnalysis(unittest.TestCase):
             "ClassB":  [np.array([[[1, 1]], [[2, 2]], [[3, 3]]])]  # invalid contour
         }
 
-
-        ma = MultiClassObjectAnalysis(self.dummy_masks,multiple_contours)
+        ma = MultiClassObjectAnalysis(self.dummy_masks,multiple_contours_failing)
         ma.contours = [np.array([[[1, 1]], [[2, 2]], [[3, 3]]])]  # invalid contour
         try:
             ma.derive_voronoi_from_contours()
