@@ -690,14 +690,16 @@ class MultiClassObjectAnalysis(GetMasks):
         centroids = []
         class_labels = []
         for class_label, contours in self.multiple_contours.items():
-            # for contour in contours:
-            #     if len(contour) < 4:
-            #         self.logger.warning(f"Skipping contour with less than 4 points for class '{class_label}'.")
-            #         continue
-            #     polygon = Polygon(contour)
-            for polygon in list_of_polygons:
-                centroids.append(polygon.centroid)
-                class_labels.append(class_label)
+            for contour in contours:
+                contour = contour.squeeze()
+
+                if contour is not None and len(contour) >= 3:
+                    polygon = Polygon(contour)
+                    centroids.append(polygon.centroid)
+                    class_labels.append(class_label)
+                else:
+                    self.logger.warning(f"Skipping contour with less than 4 points for class '{class_label}'.")
+                    continue
 
         if len(centroids) < 4:
             # Not enough data to compute Voronoi
@@ -723,24 +725,50 @@ class MultiClassObjectAnalysis(GetMasks):
         self.voronoi_regions = regions
         self.voronoi_vertices = vertices
 
+    # def get_voronoi_mask(self, category_name):
+    #     """
+    #     Creates a binary mask of Voronoi regions for a given class category.
+    #
+    #     Args:
+    #         category_name (str): The class label to extract Voronoi regions for.
+    #
+    #     Returns:
+    #         np.ndarray: Binary mask of selected Voronoi regions.
+    #     """
+    #
+    #     mask = np.zeros((self.height, self.width), dtype=np.uint8)
+    #
+    #     for idx, (label, region) in enumerate(zip(self.class_labels, self.voronoi_regions)):
+    #         if label != category_name:
+    #             continue
+    #         polygon = self.voronoi_vertices[region]
+    #         # Clip coordinates inside image boundaries
+    #         polygon[:, 0] = np.clip(polygon[:, 0], 0, self.width - 1)
+    #         polygon[:, 1] = np.clip(polygon[:, 1], 0, self.height - 1)
+    #         int_polygon = polygon.astype(np.int32)
+    #         if len(int_polygon) >= 3:
+    #             cv2.fillPoly(mask, [int_polygon], color=255)
+    #
+    #     return mask
     def get_voronoi_mask(self, category_name):
         """
-        Creates a binary mask of Voronoi regions for a given class category.
-
-        Args:
-            category_name (str): The class label to extract Voronoi regions for.
-
-        Returns:
-            np.ndarray: Binary mask of selected Voronoi regions.
+        Returns the Voronoi mask for a given category.
+        If Voronoi is unavailable (e.g. too few centroids), returns a full mask.
         """
 
         mask = np.zeros((self.height, self.width), dtype=np.uint8)
 
+        # If Voronoi could not be computed, default to full image for that category
+        if self.voronoi_regions is None or self.voronoi_vertices is None:
+            # Option 1: Allow expansion to go anywhere
+            mask[:, :] = 255
+            return mask
+
+        # Normal case
         for idx, (label, region) in enumerate(zip(self.class_labels, self.voronoi_regions)):
             if label != category_name:
                 continue
             polygon = self.voronoi_vertices[region]
-            # Clip coordinates inside image boundaries
             polygon[:, 0] = np.clip(polygon[:, 0], 0, self.width - 1)
             polygon[:, 1] = np.clip(polygon[:, 1], 0, self.height - 1)
             int_polygon = polygon.astype(np.int32)
@@ -749,9 +777,26 @@ class MultiClassObjectAnalysis(GetMasks):
 
         return mask
 
-    def expand_mask(self, mask, expansion_distance):
+    #todo change this part to meet the other expansions!!!!!
+    # def expand_mask(self, mask, expansion_distance):
+    #     """
+    #     Expands a binary mask using morphological dilation.
+    #
+    #     Args:
+    #         mask (np.ndarray): The binary mask to be expanded.
+    #         expansion_distance (int): Distance (in pixels) to expand the mask.
+    #
+    #     Returns:
+    #         np.ndarray: The expanded mask minus the original mask.
+    #     """
+    #
+    #     kernel = np.ones((expansion_distance, expansion_distance), np.uint8)
+    #     expanded_mask = cv2.dilate(mask, kernel, iterations=1)
+    #     expanded_mask = cv2.subtract(expanded_mask, mask)
+    #     return expanded_mask
+    def  expand_mask(self, mask: np.ndarray, expansion_distance: int) -> np.ndarray:
         """
-        Expands a binary mask using morphological dilation.
+        Expands a binary mask using distance transform, returning the expansion area only.
 
         Args:
             mask (np.ndarray): The binary mask to be expanded.
@@ -760,11 +805,17 @@ class MultiClassObjectAnalysis(GetMasks):
         Returns:
             np.ndarray: The expanded mask minus the original mask.
         """
+        if not np.any(mask):
+            return np.zeros_like(mask, dtype=np.uint8)
 
-        kernel = np.ones((expansion_distance, expansion_distance), np.uint8)
-        expanded_mask = cv2.dilate(mask, kernel, iterations=1)
-        expanded_mask = cv2.subtract(expanded_mask, mask)
+            # Compute distance from the background to the object mask
+        dist_transform = distance_transform_edt(mask == 0)
+
+        # Select pixels within the expansion distance (excluding original mask)
+        expanded_mask = (dist_transform <= expansion_distance) & (mask == 0)
+        expanded_mask = expanded_mask.astype(np.uint8)  # Convert to binary mask
         return expanded_mask
+
 
     def generate_expanded_masks_limited_by_voronoi(self, expansion_distances):
         """
@@ -796,6 +847,22 @@ class MultiClassObjectAnalysis(GetMasks):
 
         # Create binary masks for each individual contour, label them, assign parent IDs
         for category_name, contours in self.multiple_contours.items():
+            if not contours or all(c.shape[0] < 4 for c in contours):
+                empty_mask = np.zeros((self.height, self.width), dtype=np.uint8)
+                empty_labeled = np.zeros_like(empty_mask, dtype=np.int32)
+                key = f"{category_name}"
+
+                masks[key] = empty_mask
+                labeled_masks[key] = empty_labeled
+
+                original_masks_info[category_name] = []
+                # Add empty expansions too
+                for expansion_distance in expansion_distances:
+                    exp_key = f"{category_name}_expansion_{expansion_distance}"
+                    masks[exp_key] = empty_mask.copy()
+                    labeled_masks[exp_key] = empty_labeled.copy()
+
+
             category_masks = []
             for contour in contours:
                 mask = np.zeros((self.height, self.width), dtype=np.uint8)
