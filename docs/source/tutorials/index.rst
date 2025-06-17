@@ -14,3 +14,6 @@ Welcome to the tutorials and getting started guide for GRIDGEN!
    ../case_studies/5_population_specific_objects_single.ipynb
    ../case_studies/6_population_specific_objects_multi.ipynb
    ../case_studies/7_overlay_cell_segmentation.ipynb
+   ../case_studies/8_alternative_ways_masking_som.ipynb
+
+
