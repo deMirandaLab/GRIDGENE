@@ -7,6 +7,7 @@ from gridgen.logger import get_logger
 from functools import wraps
 import os
 import time
+import logging
 # todo change to receive the logger from the main module
 def timeit(func):
     @wraps(func)
@@ -154,7 +155,9 @@ class GeneCounter:
             if obj_id == 0:
                 continue
             mask = labeled_mask == obj_id
-            counts = np.einsum('ijk,ij->k', array_counts.astype(np.int16), mask.astype(np.int16))
+            # counts = np.einsum('ijk,ij->k', array_counts.astype(np.int16), mask.astype(np.int8))
+            counts = array_counts[mask].sum(axis=0, dtype=np.int64)
+
             counts_dict = {gene: counts[i] for gene, i in target_dict.items()}
             counts_dict['object_id'] = obj_id
             results.append(counts_dict)
@@ -173,7 +176,9 @@ class GeneCounter:
             List[Dict[str, Any]]: Single-item list with gene counts.
         """
         mask = mask.astype(bool)
-        counts = np.einsum('ijk,ij->k', array_counts.astype(np.int64), mask.astype(np.int64))
+        # counts = np.einsum('ijk,ij->k', array_counts.astype(np.int64), mask.astype(np.int64))
+        counts = array_counts[mask].sum(axis=0, dtype=np.int64)
+
         counts_dict = {gene: counts[i] for gene, i in target_dict.items()}
         counts_dict['object_id'] = 'bulk'
         return [counts_dict]
@@ -198,8 +203,9 @@ class GeneCounter:
                 sub_mask = mask[y:y+grid_size, x:x+grid_size].astype(bool)
                 if not np.any(sub_mask):
                     continue
-                counts = np.einsum('ijk,ij->k', array_counts[y:y + grid_size, x:x + grid_size].astype(np.int64),
-                                   sub_mask.astype(np.int64))
+                # counts = np.einsum('ijk,ij->k', array_counts[y:y + grid_size, x:x + grid_size].astype(np.int64),
+                #                    sub_mask.astype(np.int64))
+                counts = array_counts[y:y + grid_size, x:x + grid_size][sub_mask].sum(axis=0, dtype=np.int64)
                 counts_dict = {gene: counts[i] for gene, i in target_dict.items()}
                 counts_dict['object_id'] = f'grid_{x}_{y}'
                 results.append(counts_dict)
@@ -234,7 +240,9 @@ class MaskAnalysisPipeline:
     Main pipeline for analyzing masks with gene counts and morphology.
     """
 
-    def __init__(self, mask_definitions: List[MaskDefinition], array_counts: np.ndarray, target_dict: Dict[str, int]) -> None:
+    def __init__(self, mask_definitions: List[MaskDefinition], array_counts: np.ndarray, target_dict: Dict[str, int],
+                 logger: Optional[logging.Logger] = None,
+                 ) -> None:
         """
         Initialize the pipeline.
 
@@ -250,7 +258,8 @@ class MaskAnalysisPipeline:
         self.counter = GeneCounter()
         self.results: List[MaskAnalysisResult] = []
         self.labeled_masks: Dict[str, np.ndarray] = {}  # Store labeled versions of masks
-
+        self.logger = logger or get_logger(f'{__name__}.{"GetMasks"}')
+        self.logger.info(f"Initialized MaskAnalysisPipeline with {len(mask_definitions)} masks.")
     @timeit
     def run(self) -> List[MaskAnalysisResult]:
         """
@@ -263,23 +272,27 @@ class MaskAnalysisPipeline:
         self.results.clear()
 
         for defn in self.mask_definitions:
-            if defn.analysis_type == 'per_object':
-                labeled = label(defn.mask)
-                self.labeled_masks[defn.mask_name] = labeled
-                morpho = self.extractor.extract_per_object_features(labeled)
-                counts = self.counter.count_genes_per_object(labeled, self.array_counts, self.target_dict)
+            self.logger.info(f"Processing mask: {defn.mask_name} ({defn.analysis_type})")
+
+            # if defn.analysis_type == 'per_object':
+            #     labeled = label(defn.mask)
+            #     self.labeled_masks[defn.mask_name] = labeled
+            if defn.analysis_type == "per_object" and defn.mask_name not in self.labeled_masks:
+                self.labeled_masks[defn.mask_name] = label(defn.mask)
+                morpho = self.extractor.extract_per_object_features(self.labeled_masks[defn.mask_name])
+                counts = self.counter.count_genes_per_object(self.labeled_masks[defn.mask_name], self.array_counts.astype(np.int16), self.target_dict)
                 merged = self._merge_dicts_by_key(morpho, counts, 'object_id')
 
             elif defn.analysis_type == 'bulk':
                 morpho = self.extractor.extract_bulk_features(defn.mask)
-                counts = self.counter.count_genes_bulk(defn.mask, self.array_counts, self.target_dict)
+                counts = self.counter.count_genes_bulk(defn.mask, self.array_counts.astype(np.int16), self.target_dict)
                 merged = self._merge_dicts_by_key(morpho, counts, 'object_id')
 
             elif defn.analysis_type == 'grid':
                 if defn.grid_size is None:
                     raise ValueError("Grid size required for grid analysis.")
                 morpho = self.extractor.extract_grid_features(defn.mask, defn.grid_size)
-                counts = self.counter.count_genes_grid(defn.mask, self.array_counts, self.target_dict, defn.grid_size)
+                counts = self.counter.count_genes_grid(defn.mask, self.array_counts.astype(np.int16), self.target_dict, defn.grid_size)
                 merged = self._merge_dicts_by_key(morpho, counts, 'object_id') if counts else morpho
 
             else:
@@ -296,6 +309,7 @@ class MaskAnalysisPipeline:
                 item['analysis_type'] = defn.analysis_type
 
             self.results.append(MaskAnalysisResult(defn.mask_name, defn.analysis_type, merged))
+            # self.logger.info(f"Finished {defn.mask_name} in {elapsed:.2f} sec")
 
         return self.results
 
