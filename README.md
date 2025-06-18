@@ -5,12 +5,9 @@
 ![Python](https://img.shields.io/pypi/pyversions/gridgen)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-![GRIDGEN Logo](docs/logo.png)  <!-- Example image link -->
 
 **GRIDGEN** (Guided Region Identification based on Density of GENes) is a Python package designed for defining  
-regions of interest based on transcript density.
-
-GRIDGEN enables the identification of biologically relevant tissue compartments, including interfaces between regions  
+regions of interest based on transcript density. It enables the identification of biologically relevant tissue compartments, including interfaces between regions  
 (e.g., cancer vs. stroma), phenotype-enriched areas, and zones defined by specific gene signatures.
 
 ---
@@ -33,10 +30,7 @@ GRIDGEN enables the identification of biologically relevant tissue compartments,
   - Cell segmentation overlay  
 
 General view: 
-![plot](docs/figures/GRIDGEN_overview.png)
-
-
-
+![plot](docs/figures/gridgen.png)
 
 GRIDGEN contains the following Case Studies: 
   - tumor microenvironment analysis  
@@ -48,7 +42,7 @@ GRIDGEN contains the following Case Studies:
 
 ## Documentation
 
-Documentation is available at [GRIDGEN Documentation](https://demirandalab.github.io/GRIDGEN/).
+Documentation is available at [GRIDGEN Documentation](https://demirandalab-gridgen.readthedocs.io/en/latest/).
 
 ---
 
