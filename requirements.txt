@@ -22,4 +22,3 @@ itables
 openpyxl
 minisom
 squidpy
-sphinx.ext.napoleon
