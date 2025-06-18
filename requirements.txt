@@ -19,7 +19,7 @@ nbsphinx
 ipykernel
 sphinx-rtd-theme
 itables
-openpyxml
+openpyxl
 minisom
 squidpy
 sphinx.ext.napoleon
