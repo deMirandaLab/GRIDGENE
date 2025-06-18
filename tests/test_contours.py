@@ -1,12 +1,15 @@
 import unittest
 import numpy as np
+import pandas as pd
 import cv2
 import os
 import tempfile
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 from gridgen.contours import GetContour
 from gridgen.contours import ConvolutionContours
+from gridgen.contours import KDTreeContours
 
 
 def make_dummy_contour(center, radius, points=8):
@@ -103,6 +106,74 @@ class TestConvolutionContours(unittest.TestCase):
         # Just check that the shape is preserved and values are finite
         self.assertEqual(self.cc.local_sum_image.shape, self.array.shape[:2])
         self.assertTrue(np.isfinite(self.cc.local_sum_image).all())
+
+def make_dummy_kd_data():
+    np.random.seed(0)
+    x = np.random.randint(10, 90, size=200)
+    y = np.random.randint(10, 90, size=200)
+    df = pd.DataFrame({'X': x, 'Y': y})
+    return df
+
+class TestKDTreeContours(unittest.TestCase):
+
+    def setUp(self):
+        self.df = make_dummy_kd_data()
+        self.height, self.width = 100, 100
+        self.contour_name = "test_kd"
+        self.kdc = KDTreeContours(self.df, contour_name=self.contour_name, height=self.height, width=self.width)
+
+    def test_get_kdt_dist_and_array(self):
+        self.kdc.get_kdt_dist(radius=5)
+        arr = self.kdc.get_neighbour_array()
+        self.assertIsInstance(arr, np.ndarray)
+        self.assertEqual(arr.shape, (self.height + 1, self.width + 1))
+        self.assertIn(f'{self.contour_name}_neighbor_count', self.kdc.kd_tree_data.columns)
+
+    def test_interpolation_runs(self):
+        self.kdc.get_kdt_dist(radius=5)
+        self.kdc.get_neighbour_array()
+        interp = self.kdc.interpolate_array()
+        self.assertIsInstance(interp, np.ndarray)
+
+    def test_contours_from_neighbors(self):
+        self.kdc.get_kdt_dist(radius=5)
+        self.kdc.get_neighbour_array()
+        self.kdc.interpolate_array()
+        self.kdc.contours_from_neighbors(density_threshold=0.1, min_area_threshold=0.1)
+        self.assertGreater(len(self.kdc.contours), 0, "No contours were generated.")
+
+    def test_find_points_with_neighbors(self):
+        self.kdc.find_points_with_neighoors(radius=5, min_neighbours=3)
+        self.assertTrue(hasattr(self.kdc, 'points_w_neig'))
+        self.assertGreaterEqual(len(self.kdc.points_w_neig), 0)
+
+    def test_label_and_contour_circle(self):
+        self.kdc.find_points_with_neighoors(radius=5, min_neighbours=3)
+        self.kdc.get_contours_around_points_with_neighboors(type_contouring='simple_circle')
+        self.assertTrue(len(self.kdc.contours) >= 0)
+
+    def test_label_and_contour_complex(self):
+        self.kdc.find_points_with_neighoors(radius=5, min_neighbours=3)
+        self.kdc.get_contours_around_points_with_neighboors(type_contouring='complex_hull')
+        self.assertTrue(len(self.kdc.contours) >= 0)
+
+    def test_label_and_contour_concave(self):
+        self.kdc.find_points_with_neighoors(radius=5, min_neighbours=3)
+        self.kdc.get_contours_around_points_with_neighboors(type_contouring='concave_hull')
+        self.assertTrue(len(self.kdc.contours) >= 0)
+
+    def test_plot_contours(self):
+        self.kdc.find_points_with_neighoors(radius=5, min_neighbours=3)
+        self.kdc.label_points_with_neigbors()
+        self.kdc.contours_from_kd_tree_simple_circle()
+        plot = self.kdc.plot_point_clusters_with_contours(show=False)
+        self.assertIs(plot, plt)
+
+    def test_plot_dbscan_labels(self):
+        self.kdc.find_points_with_neighoors(radius=5, min_neighbours=3)
+        self.kdc.label_points_with_neigbors()
+        plot = self.kdc.plot_dbscan_labels(show=False)
+        self.assertIs(plot, plt)
 
 
 if __name__ == '__main__':

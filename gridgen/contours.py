@@ -1,6 +1,7 @@
 import logging
 import cv2
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import os
@@ -13,9 +14,12 @@ import time
 from scipy.spatial import KDTree
 from sklearn.cluster import DBSCAN
 from gridgen.logger import get_logger
-from typing import Optional, Tuple, Dict, Any, List
+from typing import Optional, Tuple, List, Dict, Any, Union
+from matplotlib.figure import Figure
+
 from matplotlib.axes import Axes
 from functools import wraps
+from sklearn.neighbors import BallTree
 
 def timeit(func):
     @wraps(func)
@@ -23,10 +27,18 @@ def timeit(func):
         start = time.time()
         result = func(*args, **kwargs)
         end = time.time()
-        print(f"{func.__name__} took {end - start:.4f} seconds")
+        elapsed = end - start
+
+        # Try to log using `self.logger` if available
+        instance = args[0]  # self, assuming it's a method
+        logger = getattr(instance, 'logger', None)
+        if logger:
+            logger.info(f"{func.__name__} took {elapsed:.4f} seconds")
+        else:
+            print(f"{func.__name__} took {elapsed:.4f} seconds")
+
         return result
     return wrapper
-
 
 class GetContour():
     """
@@ -50,7 +62,8 @@ class GetContour():
         Number of contours remaining after area filtering.
     logger : logging.Logger
         Logger for logging information and errors.
-
+    points_x_y: np.ndarray
+        Optional 2D array of points (x, y) for plotting or further processing.
     Methods
     -------
     __init__(array_to_contour, logger=None, contour_name=None):
@@ -76,7 +89,7 @@ class GetContour():
 
     """
 
-    def __init__(self, array_to_contour, logger=None, contour_name=None):
+    def __init__(self, array_to_contour, logger=None, contour_name=None, points_x_y:np.ndarray = None):
         """
         Initializes the GetContour class with the given array and optional logger and contour name.
 
@@ -88,6 +101,8 @@ class GetContour():
             Logger for logging information and errors (default is None, which configures a default logger).
         contour_name : str, optional
             Name of the contour for identification (default is None).
+        points_x_y : np.ndarray, optional
+            Optional 2D array of points (x, y) for plotting or further processing (default is None).
         """
         self.array = array_to_contour
         self.contours = None
@@ -96,6 +111,7 @@ class GetContour():
         self.contours_filtered_area = 0
         self.logger = logger or get_logger(f'{__name__}.{contour_name or "GetContour"}')
         self.logger.info("Initialized GetContour")
+        self.points_x_y = points_x_y
 
     #############################
     # Filtering of contours
@@ -192,8 +208,12 @@ class GetContour():
         List[np.ndarray]
             The list of contours with counts and meeting area threshold.
         """
-        array2d = np.sum(self.array, axis=2)
-
+        if self.array.ndim == 3:
+            array2d = np.sum(self.array, axis=2)
+        elif self.array.ndim == 2:
+            array2d = self.array
+        else:
+            raise ValueError(f"Unexpected array shape: {array.shape}")
         valid_contours = []
 
         for contour in self.contours:
@@ -337,7 +357,11 @@ class GetContour():
         :param ax: Axes object to draw the plot on (default is None, plot is drawn on the current axes)
         :param kwargs: Additional keyword arguments for scatter and plot
         """
-        x, y = np.where(np.sum(self.array, axis=2) > 0)
+        if self.points_x_y is not None:
+            x = self.points_x_y[:, 0].astype(int)  # X column
+            y = self.points_x_y[:, 1].astype(int)  # Y column
+        else:
+            x, y = np.where(np.sum(self.array, axis=2) > 0)
 
         if ax is None:
             plt.figure(figsize=figsize)
@@ -489,46 +513,166 @@ class ConvolutionContours(GetContour):
         # self.logger.info(f'Contours extracted from sum after checks: {len(self.contours)}')
 
 
-######## TODO testing and cleaning here.
 class KDTreeContours(GetContour):
+    """
+    KDTreeContours extends GetContour to analyze spatial point data using KD-tree,
+    neighbors count, and derive contours via DBSCAN clustering and various hulls.
+    """
 
-    def __init__(self, kd_tree_data, logger=None, contour_name=None):
-
-        # Initialize parent class attributes
-        super().__init__(kd_tree_data, logger, contour_name)
-        # Initialize subclass-specific attributes
-        self.kd_tree_data = kd_tree_data
-        self.radius = None
-
-        # todo KD tree data is an array. but it could be a df. change this
-        self.image_size = (kd_tree_data.shape[0], kd_tree_data.shape[1])
-        self.points = np.argwhere(kd_tree_data == 1)  # Extract indices where value is 1
-
-    def find_points_with_neighoors(self, radius, min_neighbours):
+    def __init__(
+            self,
+            kd_tree_data: Union[pd.DataFrame, np.ndarray],
+            logger=None,
+            contour_name: Optional[str] = None,
+            height: Optional[int] = None,
+            width: Optional[int] = None,
+    ):
         """
-        Find points in the array with neighbors within a given radius.
+        :param kd_tree_data: DataFrame or ndarray containing X, Y coordinate data
+                             (must contain columns or shape accordingly)
+        :param logger: optional logger for information
+        :param contour_name: name of contour, used in neighbor-count column
+        :param height: image height (y-max) for array creation
+        :param width: image width (x-max)
+        """
+        # Coerce kd_tree_data to DataFrame if ndarray:
+        if isinstance(kd_tree_data, np.ndarray):
+            kd_tree_data = pd.DataFrame(kd_tree_data, columns=["X", "Y"])
+        assert isinstance(kd_tree_data, pd.DataFrame), "kd_tree_data must be DataFrame"
 
+        # Set attributes
+        self.kd_tree_data = kd_tree_data.copy()
+        self.points_x_y = self.kd_tree_data[["X", "Y"]].to_numpy()
+        self.contour_name = contour_name or "contour"
+        self.height = height or int(self.kd_tree_data["Y"].max())
+        self.width = width or int(self.kd_tree_data["X"].max())
+        self.image_size = (self.height + 1, self.width + 1)
+
+        super().__init__(
+            kd_tree_data,
+            logger,
+            self.contour_name,
+            self.points_x_y,
+        )
+
+    @timeit
+    def get_kdt_dist(self, radius:int) -> None:
+        """
+        Compute neighbor counts using BallTree and add column to kd_tree_data.
+        This method uses BallTree to find neighbors within a specified radius
+        and adds a new column to the kd_tree_data DataFrame with the count of neighbors.
         Parameters
         ----------
-        array_points : np.ndarray
-            Array of points to search for neighbors.
-        radius : float
-            Radius in pixels within which to search for neighbors.
-
+        radius : int
+            The radius within which to count neighbors for each point.
+            This is the maximum distance to consider a point as a neighbor.
         Returns
         -------
-        np.ndarray
-            Array of points with neighbors within the given radius.
+        None
+        """
+        self.radius = radius # max_dist
+        # # Query neighbors within the radiu
+        ball_tree = BallTree(self.points_x_y)
+        neighbor_counts = ball_tree.query_radius(self.points_x_y, self.radius)
+
+        self.kd_tree_data[f'{self.contour_name}_neighbor_count'] = np.array(
+            [len(neighbors) for neighbors in neighbor_counts]
+        )
+
+    @timeit
+    def get_neighbour_array(self) -> np.ndarray:
+        """
+        Construct a 2D array of neighbor counts indexed by rounded integer coordinates.
+        """
+        self.array_total_nei = np.zeros((self.height + 1, self.width + 1))
+
+        # Get rounded integer indices as NumPy arrays
+        x_indices = np.round(self.kd_tree_data['X']).astype(int).to_numpy()
+        y_indices = np.round(self.kd_tree_data['Y']).astype(int).to_numpy()
+        values = self.kd_tree_data[f'{self.contour_name}_neighbor_count'].to_numpy()
+        # Assign values directly using advanced indexing
+        self.array_total_nei[x_indices, y_indices] = values
+
+        return self.array_total_nei
+    def interpolate_array(self) -> np.ndarray:
+        """
+        Fill zeros in array_total_nei via OpenCV inpainting.
+        """
+        assert hasattr(self, "array_total_nei"), "Call get_neighbour_array first"
+
+        # Convert zeros to NaN to create a mask
+        mask = (self.array_total_nei == 0).astype(np.uint8)  # Mask of missing values
+        self.array_total_nei = cv2.inpaint(self.array_total_nei.astype(np.float32), mask, inpaintRadius=3,
+                                                 flags=cv2.INPAINT_TELEA)
+        return self.array_total_nei
+
+
+    # same as covcontours_from_sum. change this future version
+    @timeit
+    def contours_from_neighbors(
+            self, density_threshold: float, min_area_threshold: float,
+            directionality: str = 'higher') -> None:
+        """
+       Extracts contours from the local sum image based on a density threshold and filters them by area.
+
+       Parameters
+       ----------
+       density_threshold : float
+           Density threshold for extracting contours.
+       min_area_threshold : float
+           Minimum area threshold for filtering contours.
+       directionality : str, optional
+           Directionality for finding contours ('higher' or 'lower'), by default 'higher'.
+       """
+        if self.array_total_nei is None:
+            raise RuntimeError("local_sum_image is not computed. Run get_conv_sum() first.")
+
+        # check give the same name
+        self.local_sum_image = self.array_total_nei.copy()
+        self.array = self.array_total_nei.copy()[...,np.newaxis]  # Add a new axis to make it 3D
+
+        if directionality == 'higher':
+            binary_mask = (self.array_total_nei > density_threshold).astype(np.uint8)
+        elif directionality == 'lower':
+            binary_mask = (self.array_total_nei < density_threshold).astype(np.uint8)
+        else:
+            raise ValueError("directionality must be either 'higher' or 'lower'.")
+
+        contours, _ = cv2.findContours(binary_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        self.contours = contours
+
+        self.check_contours()
+        self.filter_contours_no_counts_and_area(min_area_threshold)
+        self.logger.info(f'Contours extracted from neighboor counts after checks: {len(self.contours)}')
+
+
+#######################################################
+    def find_points_with_neighoors(self, radius: float, min_neighbours: int) -> None:
+        """
+        Find points in the array with neighbors within a given radius.
+        This method uses KDTree to efficiently find points that have a specified number of neighbors
+        within a given radius.
+        Parameters
+        ----------
+        radius : float
+            The radius within which to search for neighbors.
+        min_neighbours : int
+            Minimum number of neighbors required for a point to be considered valid.
+        Returns
+        -------
+        None
         """
         # todo add check for array_points
+        self.radius = radius
+        self.min_neighbours = min_neighbours
 
         # Initialize KDTree with the array of points
-        kd_tree = KDTree(self.points)
+        kd_tree = KDTree(self.points_x_y)
 
         # Count points within the radius for each point
-        counts = [len(kd_tree.query_ball_point(p, radius)) for p in self.points]
+        counts = [len(kd_tree.query_ball_point(p, radius)) for p in self.points_x_y]
         # Filter points with more than 2 neighbors
-        filtered_points = self.points[np.array(counts) > min_neighbours]
+        filtered_points = self.points_x_y[np.array(counts) > min_neighbours]
         self.logger.info("Points with more than %d neighbors: %d", min_neighbours, len(filtered_points))
 
         self.points_w_neig = filtered_points
@@ -538,7 +682,19 @@ class KDTreeContours(GetContour):
         if len(filtered_points) == 0:
             self.logger.WARNING("No points with neighbors found within the given radius.")
 
-    def label_points_with_neigbors(self):
+    def label_points_with_neigbors(self) -> None:
+        """
+        Run DBSCAN clustering on points_w_neig.
+        This method labels points with neighbors using DBSCAN clustering.
+        It uses the radius and minimum number of neighbors to form clusters.
+        The resulting labels are stored in self.dbscan_labels.
+        Parameters
+        ----------
+        None
+        Returns
+        -------
+        None
+        """
         # eps = 60  # Search radius (similar to the one used in KDTree)
         min_samples = max(self.min_neighbours, 2)  # Minimum number of points in a cluster
         # is going to be min_neighboors, or in case is 1, 2
@@ -549,7 +705,12 @@ class KDTreeContours(GetContour):
         self.dbscan_labels = db.fit_predict(self.points_w_neig)
         self.logger.info("Points w/ neig agglomerated in DBSCAN labels: %d", len(self.dbscan_labels))
 
-    def contours_from_kd_tree_simple_circle(self):
+    def contours_from_kd_tree_simple_circle(self) -> None:
+        """
+        Draw circular hull around each DBSCAN cluster.
+        This method generates contours by creating circles around each cluster of points identified by DBSCAN.
+        Each circle is centered at the centroid of the cluster and has a radius that encompasses all points in the cluster.
+        """
         contours_list = []
         unique_labels = set(self.dbscan_labels)
         for label in unique_labels:
@@ -580,12 +741,12 @@ class KDTreeContours(GetContour):
 
         self.contours = contours_list
         self.logger.info("N contours: %d", len(self.contours))
-
         del contours_list
 
-    def contours_from_kd_tree_concave_hull(self, alpha=0.1):
+    def contours_from_kd_tree_concave_hull(self, alpha: float = 0.1) -> None:
         """
         Generate contours using concave hulls (alpha shapes).
+        Still in development, not working properly.
 
         Parameters
         ----------
@@ -627,7 +788,11 @@ class KDTreeContours(GetContour):
         self.contours = contours_list
         self.logger.info("Generated %d concave hull contours", len(self.contours))
 
-    def contours_from_kd_tree_complex_hull(self):
+    def contours_from_kd_tree_complex_hull(self) -> None:
+        """
+        Draw convex hulls around clusters using scipy.ConvexHull.
+        Still in development, not working properly.
+        """
         # todo not working properly
         contours_list = []
         unique_labels = set(self.dbscan_labels)
@@ -665,20 +830,25 @@ class KDTreeContours(GetContour):
         self.contours = contours_list
         self.logger.info("N contours: %d", len(self.contours))
 
-    def refine_contours(self):
-        pass
+    # def refine_contours(self):
+    #     pass
 
-    def get_contours(self, radius, min_neighbours, type_contouring='simple_circle'):
-        self.radius = radius
-        self.min_neighbours = min_neighbours  # number of neighboors of each point to be considered. > than.
-        # FOr GD I just want 1 point
-
-        # 1 find points that have neighboors in a radius of N pixels from the kd_tree_data
-        self.find_points_with_neighoors(radius, min_neighbours)
-
-        # if self.points_w_neig.ndim == 3:
-        # self.points_w_neig = self.points_w_neig[:, :2]
-        # self.points_w_neig = self.points_w_neig[:, 1:3]
+    def get_contours_around_points_with_neighboors(self, type_contouring : str ='simple_circle') -> None:
+        """
+        Get contours around points with neighbors using KDTree and DBSCAN.
+        This method performs the following steps:
+        2. Label close points using DBSCAN clustering.
+        3. Create contours based on the labeled points using different contouring methods.
+        4. Check the validity of the contours.
+        Parameters
+        ----------
+        type_contouring : str
+            Type of contouring to use. Options are 'simple_circle', 'complex_hull', or 'concave_hull'.
+            Default is 'simple_circle'.
+        Returns
+        -------
+        None
+        """
         # 2. Label close points with DBSCAN
         self.label_points_with_neigbors()
 
@@ -693,68 +863,200 @@ class KDTreeContours(GetContour):
         self.check_contours()
         self.total_valid_contours = len(self.contours)
 
-    def plot_point_clusters_with_contours(self, show=False, figsize=(10, 10)):
-        # todo change plot to be in accordance. axes, fig size ...
-        # Step 2: Plotting the clusters and contours
-        plt.figure(figsize=figsize)
+    def plot_point_clusters_with_contours(self,
+                                          show: bool = False,
+                                          figsize: Tuple = (10, 10)) -> plt.Figure:
+
+        """
+           Plot DBSCAN-derived clusters and their contour boundaries.
+
+           This method plots each contour in `self.contours` and overlays the clustered points
+           (from `self.points_w_neig` and `self.dbscan_labels`). Contours are expected to be arrays
+           of shape (N, 1, 2) or (N, 2); the singleton middle dimension is squeezed out automatically.
+
+           Parameters
+           ----------
+           show : bool, default=False
+               If True, the plot is immediately displayed via `plt.show()`. If False, the Figure
+               object is returned for further manipulation or testing, and no immediate `show()` is called.
+           figsize : tuple of int (width, height), default=(10, 10)
+               Size of the figure in inches.
+
+           Returns
+           -------
+           matplotlib.figure.Figure
+               The created Figure object containing the cluster and contour plot.
+               If `show=True`, the figure is still returned after display.
+
+           Raises
+           ------
+           AttributeError
+               If `self.contours`, `self.points_w_neig`, or `self.dbscan_labels` are not set.
+           ValueError
+               If any contour cannot be interpreted as a sequence of 2D points.
+
+           Notes
+           -----
+           - It is assumed that:
+             - `self.contours` is a sequence (e.g., list) of NumPy arrays, each representing a contour.
+               Commonly each contour has shape (N, 1, 2) as returned by OpenCV’s `findContours`, or (N, 2).
+             - `self.points_w_neig` is a NumPy array of shape (M, 2) containing the points that were clustered.
+             - `self.dbscan_labels` is a 1D array of length M containing integer cluster labels from DBSCAN.
+           - Points with label `-1` (noise) are skipped and not plotted.
+           - X vs Y axes:
+             - Contour arrays are plotted with `x = contour[:, 0]`, `y = contour[:, 1]`.
+             - Cluster points are scattered at `(pts[:, 0], pts[:, 1])`.
+             - Adjust if your coordinate convention is reversed
+           """
+        # Validate that required attributes exist
+        if not hasattr(self, "contours"):
+            raise AttributeError("`self.contours` is not defined. Run contour-generation first.")
+        if not hasattr(self, "points_w_neig") or not hasattr(self, "dbscan_labels"):
+            raise AttributeError("`self.points_w_neig` or `self.dbscan_labels` not defined. Run DBSCAN steps first.")
+
+        # Create figure and axis
+        fig, ax = plt.subplots(figsize=figsize)
 
         # Plot each contour
-        for contour in self.contours:
-            plt.plot(contour[:, 0], contour[:, 1], 'b-', alpha=0.7)  # Plot each contour in blue
+        for idx, contour in enumerate(self.contours):
+            # contour may have shape (N, 1, 2) or (N, 2). Squeeze the singleton dim if present.
+            arr = contour
+            try:
+                # If shape is (N, 1, 2), squeeze middle dimension
+                if arr.ndim == 3 and arr.shape[1] == 1:
+                    arr = arr.squeeze(1)  # now (N, 2)
+            except Exception:
+                raise ValueError(f"Contour at index {idx} has unexpected shape {contour.shape}")
 
-        # Optionally, plot the filtered points and centroids
-        for label in self.dbscan_labels:
-            if label == -1:
+            if arr.ndim != 2 or arr.shape[1] != 2:
+                # Skip or raise error; here we choose to skip with a warning
+                # You may replace with: raise ValueError(...)
+                import warnings
+                warnings.warn(f"Skipping contour at index {idx}: expected shape (N,2) after squeeze, got {arr.shape}")
                 continue
 
-            cluster_points = self.points_w_neig[self.dbscan_labels == label]
-            plt.scatter(cluster_points[:, 1], cluster_points[:, 0], label=f"Cluster {label}", alpha=0.7)
+            # Plot: x = arr[:, 0], y = arr[:, 1]
+            ax.plot(arr[:, 0], arr[:, 1], color='blue', linestyle='-', alpha=0.7, label="_nolegend_")
 
-            # # Plot the centroid
-            # centroid = np.mean(cluster_points, axis=0)
-            # plt.scatter(centroid[1], centroid[0], color='red', marker='x', label=f"Centroid {label}")
+        # Plot cluster points (skip noise label = -1)
+        labels = self.dbscan_labels
+        pts = self.points_w_neig
+        # Optionally, you could collect unique labels except -1:
+        unique_labels = sorted(set(labels) - {-1})
+        for label in unique_labels:
+            mask = (labels == label)
+            cluster_points = pts[mask]
+            if cluster_points.size == 0:
+                continue
+            ax.scatter(cluster_points[:, 0], cluster_points[:, 1],
+                       label=f"Cluster {label}", alpha=0.7, s=10)
 
-        plt.title("Clusters with Boundaries (Contours)")
-        plt.xlabel("X-axis")
-        plt.ylabel("Y-axis")
-        # plt.legend(loc='upper right')
+            # If desired, plot centroids:
+            # centroid = cluster_points.mean(axis=0)
+            # ax.scatter(centroid[0], centroid[1], color='red', marker='x',
+            #            label=f"Centroid {label}")
+
+        ax.set_title("Clusters with Boundaries (Contours)")
+        ax.set_xlabel("X-axis")
+        ax.set_ylabel("Y-axis")
+        # You can enable legend if desired:
+        # ax.legend(loc='best', fontsize='small')
+
         if show:
             plt.show()
-        else:
-            return plt
 
-    def plot_dbscan_labels(self, show=True, figsize=(8, 8)):
-        """
-        Plot points colored by DBSCAN labels.
+        return plt
 
-        Parameters:
-        - points (np.ndarray): Array of point coordinates (N x 2).
-        - labels (np.ndarray): Array of DBSCAN labels for each point.
-        - figsize (tuple): Figure size for the plot.
-        - show (bool): Whether to display the plot or return the plot object.
+    def plot_dbscan_labels(
+            self,
+            show: bool = True,
+            figsize: Tuple[int, int] = (8, 8)
+    ) -> Figure:
         """
-        labels = self.dbscan_labels
+        Plot points colored by DBSCAN labels (clusters vs noise).
+
+        This method creates a scatter plot of the points in `self.points_w_neig`, coloring each
+        point according to its label in `self.dbscan_labels`. Noise points (label = -1) are plotted
+        with a distinct marker/style.
+
+        Parameters
+        ----------
+        show : bool, default=True
+            If True, display the plot immediately with `plt.show()`.
+            If False, return the Figure object for further manipulation or testing without showing it.
+        figsize : tuple of int (width, height), default=(8, 8)
+            Size of the figure in inches.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            The created Figure containing the DBSCAN label plot. Returned even if `show=True`.
+
+        Raises
+        ------
+        AttributeError
+            If `self.points_w_neig` or `self.dbscan_labels` are not present.
+        ValueError
+            If `self.points_w_neig` and `self.dbscan_labels` have incompatible lengths or invalid shapes.
+
+        Notes
+        -----
+        - Expects:
+            - `self.points_w_neig`: NumPy array of shape (N, 2), the points used in DBSCAN.
+            - `self.dbscan_labels`: 1D array of length N, integer labels from DBSCAN.
+        - Points labeled `-1` are treated as noise and plotted differently (marker 'x').
+        - Uses the `tab20` colormap to assign distinct colors to each cluster label.
+        - Adds a legend, grid, and axis labels.
+        - Returns the Figure to facilitate testing (e.g., `isinstance(fig, Figure)`) and saving (e.g., `fig.savefig(...)`).
+        """
+        # Validate attributes exist
+        if not hasattr(self, "points_w_neig") or not hasattr(self, "dbscan_labels"):
+            raise AttributeError(
+                "`self.points_w_neig` and `self.dbscan_labels` must be set before calling plot_dbscan_labels.")
+
         points = self.points_w_neig
-        unique_labels = set(labels)
+        labels = self.dbscan_labels
+
+        # Basic shape/length check
+        if not hasattr(points, "shape") or points.ndim != 2 or points.shape[1] < 2:
+            raise ValueError(
+                f"`self.points_w_neig` must be an array of shape (N, 2); got shape {getattr(points, 'shape', None)}")
+        if labels.shape[0] != points.shape[0]:
+            raise ValueError(f"Length mismatch: points length {points.shape[0]}, labels length {labels.shape[0]}")
+
+        # Create figure and axis
+        fig, ax = plt.subplots(figsize=figsize)
+
+        # Determine unique labels
+        unique_labels = sorted(set(labels))
+        # Use tab20 colormap to get distinct colors
         colors = plt.cm.tab20(np.linspace(0, 1, len(unique_labels)))
 
-        plt.figure(figsize=figsize)
         for label, color in zip(unique_labels, colors):
-            if label == -1:
-                # Noise points
-                plt.scatter(points[labels == label][:, 0], points[labels == label][:, 1],
-                            c=[color], label="Noise", marker="x", s=5, alpha=0.6)
-            else:
-                # Cluster points
-                plt.scatter(points[labels == label][:, 0], points[labels == label][:, 1],
-                            c=[color], label=f"Cluster {label}", s=5, alpha=0.6)
+            mask = (labels == label)
+            pts = points[mask]
+            if pts.size == 0:
+                continue
 
-        plt.title("DBSCAN Clusters and Noise Points")
-        plt.xlabel("X Coordinate")
-        plt.ylabel("Y Coordinate")
-        plt.legend()
-        plt.grid(True)
+            if label == -1:
+                # Noise points: marker 'x'
+                ax.scatter(
+                    pts[:, 0], pts[:, 1],
+                    c=[color], label="Noise", marker="x", s=20, alpha=0.6
+                )
+            else:
+                ax.scatter(
+                    pts[:, 0], pts[:, 1],
+                    c=[color], label=f"Cluster {label}", marker="o", s=20, alpha=0.6
+                )
+
+        ax.set_title("DBSCAN Clusters and Noise Points")
+        ax.set_xlabel("X Coordinate")
+        ax.set_ylabel("Y Coordinate")
+        ax.legend(loc="best", fontsize="small")
+        ax.grid(True)
+
         if show:
             plt.show()
-        else:
-            return plt
+
+        return plt
