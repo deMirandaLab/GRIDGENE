@@ -6,4 +6,7 @@ gridgen
 
    contours
    masks
-
+   mask_properties
+   overlay
+   binsom
+   logger

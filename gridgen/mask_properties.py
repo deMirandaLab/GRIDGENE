@@ -25,11 +25,16 @@ class MaskDefinition:
     """
     Definition of a mask to analyze.
 
-    Attributes:
-        mask (np.ndarray): Binary mask array.
-        mask_name (str): Name identifier for the mask.
-        analysis_type (str): Type of analysis ('per_object', 'bulk', or 'grid').
-        grid_size (Optional[int]): Grid size for 'grid' analysis type.
+    Parameters
+    ----------
+    mask : np.ndarray
+        Binary mask array.
+    mask_name : str
+        Name identifier for the mask.
+    analysis_type : str, optional
+        Type of analysis ('per_object', 'bulk', or 'grid'), by default "per_object".
+    grid_size : int or None, optional
+        Grid size for 'grid' analysis type, by default None.
     """
     mask: np.ndarray
     mask_name: str
@@ -41,10 +46,14 @@ class MaskAnalysisResult:
     """
     Container for the results of mask analysis.
 
-    Attributes:
-        mask_name (str): Name of the analyzed mask.
-        analysis_type (str): Analysis type performed.
-        features (List[Dict[str, Any]]): List of extracted features per object.
+    Parameters
+    ----------
+    mask_name : str
+        Name of the analyzed mask.
+    analysis_type : str
+        Analysis type performed.
+    features : list of dict
+        List of extracted features per object.
     """
     mask_name: str
     analysis_type: str
@@ -52,17 +61,22 @@ class MaskAnalysisResult:
 
 class MorphologyExtractor:
     """
-        Extracts morphological features from labeled masks.
+    Extracts morphological features from labeled masks.
     """
+
     def extract_per_object_features(self, labeled_mask: np.ndarray) -> List[Dict[str, Any]]:
         """
         Extract per-object morphological features from a labeled mask.
 
-        Args:
-            labeled_mask (np.ndarray): Mask where each object is labeled with an integer.
+        Parameters
+        ----------
+        labeled_mask : np.ndarray
+            Mask where each object is labeled with an integer.
 
-        Returns:
-            List[Dict[str, Any]]: List of dictionaries containing features per object.
+        Returns
+        -------
+        list of dict
+            List of dictionaries containing features per object.
         """
         properties = [
             'label',
@@ -98,11 +112,15 @@ class MorphologyExtractor:
         """
         Extract bulk features for a whole mask (e.g., total area).
 
-        Args:
-            mask (np.ndarray): Binary mask.
+        Parameters
+        ----------
+        mask : np.ndarray
+            Binary mask.
 
-        Returns:
-            List[Dict[str, Any]]: Single-item list with total area and object_id='bulk'.
+        Returns
+        -------
+        list of dict
+            Single-item list with total area and object_id='bulk'.
         """
         total_area = int(np.sum(mask))
         return [{'area': total_area, 'object_id': 'bulk'}]
@@ -111,13 +129,19 @@ class MorphologyExtractor:
         """
         Extract features by dividing the mask into grid tiles.
 
-        Args:
-            mask (np.ndarray): Binary mask.
-            grid_size (int): Size of grid tiles.
-            parent_id (Optional[str]): Optional parent ID prefix for tiles.
+        Parameters
+        ----------
+        mask : np.ndarray
+            Binary mask.
+        grid_size : int
+            Size of grid tiles.
+        parent_id : str or None, optional
+            Optional parent ID prefix for tiles, by default None.
 
-        Returns:
-            List[Dict[str, Any]]: List of features per grid tile.
+        Returns
+        -------
+        list of dict
+            List of features per grid tile.
         """
         h, w = mask.shape
         results = []
@@ -142,13 +166,19 @@ class GeneCounter:
         """
         Count genes per labeled object.
 
-        Args:
-            labeled_mask (np.ndarray): Labeled mask array.
-            array_counts (np.ndarray): 3D array of gene counts per pixel.
-            target_dict (Dict[str, int]): Mapping from gene names to indices in array_counts.
+        Parameters
+        ----------
+        labeled_mask : np.ndarray
+            Labeled mask array.
+        array_counts : np.ndarray
+            3D array of gene counts per pixel.
+        target_dict : dict
+            Mapping from gene names to indices in array_counts.
 
-        Returns:
-            List[Dict[str, Any]]: List of gene counts per object.
+        Returns
+        -------
+        list of dict
+            List of gene counts per object.
         """
         results = []
         for obj_id in np.unique(labeled_mask):
@@ -167,13 +197,19 @@ class GeneCounter:
         """
         Count genes in a bulk mask.
 
-        Args:
-            mask (np.ndarray): Binary mask.
-            array_counts (np.ndarray): 3D array of gene counts.
-            target_dict (Dict[str, int]): Mapping from gene names to indices.
+        Parameters
+        ----------
+        mask : np.ndarray
+            Binary mask.
+        array_counts : np.ndarray
+            3D array of gene counts.
+        target_dict : dict
+            Mapping from gene names to indices.
 
-        Returns:
-            List[Dict[str, Any]]: Single-item list with gene counts.
+        Returns
+        -------
+        list of dict
+            Single-item list with gene counts.
         """
         mask = mask.astype(bool)
         # counts = np.einsum('ijk,ij->k', array_counts.astype(np.int64), mask.astype(np.int64))
@@ -187,14 +223,21 @@ class GeneCounter:
         """
         Count genes in grid tiles.
 
-        Args:
-            mask (np.ndarray): Binary mask.
-            array_counts (np.ndarray): 3D gene counts.
-            target_dict (Dict[str, int]): Mapping gene -> index.
-            grid_size (int): Size of tiles.
+        Parameters
+        ----------
+        mask : np.ndarray
+            Binary mask.
+        array_counts : np.ndarray
+            3D gene counts.
+        target_dict : dict
+            Mapping gene to index.
+        grid_size : int
+            Size of tiles.
 
-        Returns:
-            List[Dict[str, Any]]: List of gene counts per grid tile.
+        Returns
+        -------
+        list of dict
+            List of gene counts per grid tile.
         """
         h, w = mask.shape
         results = []
@@ -220,12 +263,17 @@ class HierarchyMapper:
         """
         Map each source object ID to a list of parent object IDs from target mask.
 
-        Args:
-            source_labels (np.ndarray): Labeled source mask.
-            target_labels (np.ndarray): Labeled target mask (parent).
+        Parameters
+        ----------
+        source_labels : np.ndarray
+            Labeled source mask.
+        target_labels : np.ndarray
+            Labeled target mask (parent).
 
-        Returns:
-            Dict[int, List[int]]: Mapping from source object ID to list of parent IDs.
+        Returns
+        -------
+        dict
+            Mapping from source object ID to list of parent IDs.
         """
         mapping = {}
         for src_id in np.unique(source_labels):
@@ -241,15 +289,20 @@ class MaskAnalysisPipeline:
     """
 
     def __init__(self, mask_definitions: List[MaskDefinition], array_counts: np.ndarray, target_dict: Dict[str, int],
-                 logger: Optional[logging.Logger] = None,
-                 ) -> None:
+                 logger: Optional[logging.Logger] = None) -> None:
         """
         Initialize the pipeline.
 
-        Args:
-            mask_definitions (List[MaskDefinition]): List of mask definitions.
-            array_counts (np.ndarray): 3D gene counts array.
-            target_dict (Dict[str, int]): Mapping gene names to indices in array_counts.
+        Parameters
+        ----------
+        mask_definitions : list of MaskDefinition
+            List of mask definitions.
+        array_counts : np.ndarray
+            3D gene counts array.
+        target_dict : dict
+            Mapping gene names to indices in array_counts.
+        logger : logging.Logger or None, optional
+            Logger instance, by default None.
         """
         self.mask_definitions = mask_definitions
         self.array_counts = array_counts
@@ -260,15 +313,17 @@ class MaskAnalysisPipeline:
         self.labeled_masks: Dict[str, np.ndarray] = {}  # Store labeled versions of masks
         self.logger = logger or get_logger(f'{__name__}.{"GetMasks"}')
         self.logger.info(f"Initialized MaskAnalysisPipeline with {len(mask_definitions)} masks.")
+
     @timeit
     def run(self) -> List[MaskAnalysisResult]:
         """
         Run the full analysis pipeline on all mask definitions.
 
-        Returns:
-            List[MaskAnalysisResult]: List of results per mask.
+        Returns
+        -------
+        list of MaskAnalysisResult
+            List of results per mask.
         """
-
         self.results.clear()
 
         for defn in self.mask_definitions:
@@ -317,26 +372,34 @@ class MaskAnalysisPipeline:
         """
         Get all results concatenated into a single pandas DataFrame.
 
-        Returns:
-            pd.DataFrame: DataFrame with all extracted features.
+        Returns
+        -------
+        pandas.DataFrame
+            DataFrame with all extracted features.
         """
-
         if not self.results:
             self.run()
         all_features = [item for r in self.results for item in r.features]
         return pd.DataFrame(all_features)
 
-    def _merge_dicts_by_key(self, list1: List[Dict[str, Any]], list2: List[Dict[str, Any]], key: str) -> List[Dict[str, Any]]:
+    def _merge_dicts_by_key(self, list1: List[Dict[str, Any]], list2: List[Dict[str, Any]], key: str) -> List[
+        Dict[str, Any]]:
         """
         Merge two lists of dictionaries by matching values of a specified key.
 
-        Args:
-            list1 (List[Dict[str, Any]]): First list of dictionaries.
-            list2 (List[Dict[str, Any]]): Second list of dictionaries.
-            key (str): Key to merge on.
+        Parameters
+        ----------
+        list1 : list of dict
+            First list of dictionaries.
+        list2 : list of dict
+            Second list of dictionaries.
+        key : str
+            Key to merge on.
 
-        Returns:
-            List[Dict[str, Any]]: Merged list of dictionaries.
+        Returns
+        -------
+        list of dict
+            Merged list of dictionaries.
         """
         if not list1:
             return list2
@@ -346,59 +409,21 @@ class MaskAnalysisPipeline:
         return [{**d1, **index2.get(d1[key], {})} for d1 in list1]
 
     @timeit
-    def map_hierarchies(
-            self,
-            hierarchy_definitions: Dict[str, Dict[str, Any]],
-            save_dir: Optional[str] = None
-    ) -> pd.DataFrame:
+    def map_hierarchies(self, hierarchy_definitions: Dict[str, Dict[str, Any]], save_dir: Optional[str] = None) -> pd.DataFrame:
         """
         Map child objects to their parent objects using reference labeled masks.
 
-        Given a set of labeled mask arrays (or similar references) for child and parent objects,
-        this method builds a mapping DataFrame indicating, for each object in a “child” mask,
-        which object(s) in a specified “parent” mask it belongs to. Optionally, it can save
-        labeled masks to disk.
-
         Parameters
         ----------
-        hierarchy_definitions : Dict[str, Dict[str, Any]]
-            A dictionary defining the hierarchy relationships. Each key is the name of a child mask,
-            and its value is another dict with at least:
-
-                - "labels": reference to the labeled mask array (e.g., a NumPy array or other structure)
-                            representing child objects.
-                - "level_hierarchy": the name of the parent mask (string) under which this child mask is nested.
-
+        hierarchy_definitions : dict
+            Dictionary defining the hierarchy relationships.
         save_dir : str or None, optional
-            Path to a directory where intermediate or result labeled masks (e.g., masks of parent-child
-            relationships) will be saved. If None, no files are written. If provided, the method should
-            ensure the directory exists (or create it) before saving.
+            Directory to save labeled masks, by default None.
 
         Returns
         -------
-        pd.DataFrame
-            A DataFrame containing the mapping of child objects to parent objects. Expected columns:
-
-                - mask_name : str
-                    Name of the child mask (one of the keys in `hierarchy_definitions`).
-                - object_id : int (or appropriate label type)
-                    The label identifier of an object in the child mask.
-                - parent_mask : str
-                    Name of the parent mask as given by `"level_hierarchy"` in `hierarchy_definitions`.
-                - parent_ids : list[int] (or array-like)
-                    The list (or array) of parent object IDs that this child object maps to (e.g., overlaps).
-
-            Each row corresponds to one child object; if a child overlaps multiple parents,
-            `parent_ids` may be a list/tuple/array of multiple IDs.
-
-        Raises
-        ------
-        ValueError
-            If `hierarchy_definitions` is malformed (e.g., missing required keys `"labels"` or
-            `"level_hierarchy"`), or if the referenced mask arrays have incompatible shapes.
-        OSError
-            If `save_dir` is provided but cannot be created or written to.
-
+        pandas.DataFrame
+            DataFrame with mapping of child to parent objects.
         """
         records = []
 

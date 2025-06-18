@@ -22,16 +22,23 @@ from gridgen.logger import get_logger
 # TODO make bins overlapping?
 
 
-class GetBins():
+class GetBins:
     """
-    A class for binning spatial transcriptomics data into grid cells and creating AnnData objects.
+    Bin spatial transcriptomics data into grid cells and create AnnData objects.
     """
+
     def __init__(self, bin_size: int, unique_targets: List[str], logger: Optional[logging.Logger] = None):
         """
-        Initializes the GetBins class.
-        :param bin_size: Size of the bins to create (in pixels).
-        :param unique_targets: List of unique targets (genes) to include in the bins.
-        :param logger: Optional logger for logging messages.
+        Initialize GetBins.
+
+        Parameters
+        ----------
+        bin_size : int
+            Size of bins in pixels.
+        unique_targets : List[str]
+            List of target genes.
+        logger : Optional[logging.Logger], optional
+            Logger instance, by default None
         """
         self.bin_size = bin_size
         self.unique_targets = unique_targets
@@ -40,19 +47,22 @@ class GetBins():
         self.logger = logger or get_logger(f'{__name__}.{contour_name or "GetContour"}')
         self.logger.info("Initialized GetContour")
 
-
     def get_bin_df(self, df: pd.DataFrame, df_name: str) -> ad.AnnData:
         """
-         Convert a DataFrame of cells with spatial coordinates and target labels into a binned AnnData object.
+        Convert a DataFrame of cells with spatial coordinates and target labels into a binned AnnData object.
 
-         Parameters:
-         - df: DataFrame with columns ['X', 'Y', 'target']
-         - df_name: Identifier for the dataset
+        Parameters
+        ----------
+        df : pd.DataFrame
+            DataFrame with columns ['X', 'Y', 'target'] representing cell positions and target labels.
+        df_name : str
+            Identifier for the dataset.
 
-         Returns:
-         - AnnData object with spatial bins and counts per target
-         """
-
+        Returns
+        -------
+        ad.AnnData
+            AnnData object with spatial bins and counts per target.
+        """
         # Calculate grid positions
         df['x_grid'] = df['X'] // self.bin_size
         df['y_grid'] = df['Y'] // self.bin_size
@@ -92,12 +102,16 @@ class GetBins():
 
     def get_bin_cohort(self, df_list: List[pd.DataFrame], df_name_list: List[str], cohort_name: str) -> None:
         """
-        Processes multiple datasets into binned AnnData objects and concatenates them into a cohort.
+        Process multiple datasets into binned AnnData objects and concatenate them into a cohort.
 
-        Parameters:
-        - df_list: List of DataFrames
-        - df_name_list: List of dataset names
-        - cohort_name: Name of the cohort
+        Parameters
+        ----------
+        df_list : List[pd.DataFrame]
+            List of DataFrames to process.
+        df_name_list : List[str]
+            List of dataset names corresponding to each DataFrame.
+        cohort_name : str
+            Name of the cohort to assign to all data.
         """
         start_time = time.time()
         adata_list = []
@@ -111,14 +125,16 @@ class GetBins():
         self.logger.info(f'Number of bins: {len(combined_adata)}')
         self.logger.info(f'Number of genes: {len(combined_adata.var_names)}')
 
-
     def preprocess_bin(self, min_counts: int = 10, adata: Optional[ad.AnnData] = None) -> None:
         """
-        Filters and normalizes the binned AnnData.
+        Filter and normalize the binned AnnData.
 
-        Parameters:
-        - min_counts: Minimum total counts per bin to retain it
-        - adata: Optional AnnData object to preprocess (defaults to internal one)
+        Parameters
+        ----------
+        min_counts : int, optional
+            Minimum total counts per bin to retain it, by default 10
+        adata : Optional[ad.AnnData], optional
+            AnnData object to preprocess (defaults to internal one), by default None
         """
         if adata is None:
             adata = self.adata
@@ -134,11 +150,19 @@ class GetBins():
 
 class GetContour:
     """
-    A class to perform SOM clustering on spatial bins and evaluate clusters.
+    Perform SOM clustering on spatial bins and evaluate clusters.
     """
+
     def __init__(self, adata: ad.AnnData, logger: Optional[logging.Logger] = None):
         """
-        Initializes the GetContour class with an AnnData object and an optional logger.
+        Initialize GetContour.
+
+        Parameters
+        ----------
+        adata : ad.AnnData
+            AnnData object containing binned spatial transcriptomics data.
+        logger : Optional[logging.Logger], optional
+            Logger instance, by default None
         """
         self.adata = adata
         self.logger = logger
@@ -150,20 +174,28 @@ class GetContour:
             self.logger = logger
 
     def run_som(
-            self,
-            som_shape: Tuple[int, int] = (2, 1),
-            n_iter: int = 5000,
-            sigma: float = 0.5,
-            learning_rate: float = 0.5,
-            random_state: int = 42
+        self,
+        som_shape: Tuple[int, int] = (2, 1),
+        n_iter: int = 5000,
+        sigma: float = 0.5,
+        learning_rate: float = 0.5,
+        random_state: int = 42
     ) -> None:
         """
-        Applies SOM clustering on the AnnData object.
-        :param som_shape: Shape of the SOM grid (rows, columns).
-        :param n_iter: Number of iterations for SOM training.
-        :param sigma: Width of the Gaussian neighborhood function.
-        :param learning_rate: Learning rate for SOM training.
-        :param random_state: Random seed for reproducibility.
+        Apply SOM clustering on the AnnData object.
+
+        Parameters
+        ----------
+        som_shape : Tuple[int, int], optional
+            Shape of the SOM grid (rows, columns), by default (2, 1)
+        n_iter : int, optional
+            Number of iterations for SOM training, by default 5000
+        sigma : float, optional
+            Width of the Gaussian neighborhood function, by default 0.5
+        learning_rate : float, optional
+            Learning rate for SOM training, by default 0.5
+        random_state : int, optional
+            Random seed for reproducibility, by default 42
         """
         start = time.time()
         som = MiniSom(som_shape[0], som_shape[1], self.adata.shape[1],
@@ -190,12 +222,14 @@ class GetContour:
         self.logger.info(f'Number of clusters: {len(set(clusters))}')
         self.logger.info(f'number of bins in each cluster: {self.adata.obs["cluster_som"].value_counts()}')
 
-
     def eval_som_statistical(self, top_n: int = 20) -> None:
         """
-        Computes and logs top ranked features per SOM cluster.
-        :param top_n: Number of top features to retrieve for each cluster.
-        :return: None. Results are stored in self.eval_som_statistical_df.
+        Compute and log top ranked features per SOM cluster.
+
+        Parameters
+        ----------
+        top_n : int, optional
+            Number of top features to retrieve for each cluster, by default 20
         """
         sc.tl.rank_genes_groups(self.adata, "cluster_som", method="t-test")
         stats = []
@@ -211,10 +245,19 @@ class GetContour:
 
     def create_cluster_image(self, adata: ad.AnnData, grid_size: int) -> np.ndarray:
         """
-        Reconstructs an image from cluster annotations in the AnnData object.
+        Reconstruct an image from cluster annotations in the AnnData object.
 
-        Returns:
-        - 2D numpy array with cluster IDs as pixel values
+        Parameters
+        ----------
+        adata : ad.AnnData
+            AnnData object containing clustering results and grid positions.
+        grid_size : int
+            Size of each grid cell in pixels.
+
+        Returns
+        -------
+        np.ndarray
+            2D array with cluster IDs as pixel values.
         """
         # Initialize an empty image
         max_x_grid = adata.obs['x_grid'].max()
@@ -235,38 +278,40 @@ class GetContour:
 
         return reconstructed_image
 
-    # def get_som_2d_image(self, bin_size = 10):
-    #     # todo not working
-    #
-    #     unique_cases = self.adata.obs['name'].unique()
-    #     som_images = {}
-    #     for case in unique_cases:
-    #         adata_case = self.adata[self.adata.obs['name'] == case, :]
-    #         som_image = self.create_cluster_image(adata_case, grid_size=bin_size)
-    #         som_images[case] = som_image.T
-    #     self.som_images = som_images
-    #     return som_images
-
     def plot_som(
-            self,
-            som_image: np.ndarray,
-            cmap: Optional[Any] = None,
-            path: Optional[str] = None,
-            show: bool = False,
-            figsize: Tuple[int, int] = (10, 10),
-            ax: Optional[plt.Axes] = None,
-            legend_labels: Optional[Dict[int, str]] = None
+        self,
+        som_image: np.ndarray,
+        cmap: Optional[Any] = None,
+        path: Optional[str] = None,
+        show: bool = False,
+        figsize: Tuple[int, int] = (10, 10),
+        ax: Optional[plt.Axes] = None,
+        legend_labels: Optional[Dict[int, str]] = None
     ) -> plt.Axes:
         """
-        Visualizes the SOM cluster map.
-        :param som_image: 2D numpy array representing the SOM clusters.
-        :param cmap: Colormap to use for visualization (default is 'tab10').
-        :param path: Optional path to save the plot.
-        :param show: Whether to display the plot (default is False).
-        :param figsize: Size of the figure (default is (10, 10)).
-        :param ax: Optional matplotlib Axes to plot on (default is None, creates a new figure).
-        :param legend_labels: Optional dictionary mapping cluster indices to labels for the legend.
-        :return: The matplotlib Axes object with the plot.
+        Visualize the SOM cluster map.
+
+        Parameters
+        ----------
+        som_image : np.ndarray
+            2D array representing the SOM clusters.
+        cmap : Optional[Any], optional
+            Colormap to use for visualization, by default None (uses 'tab10')
+        path : Optional[str], optional
+            Optional path to save the plot image, by default None
+        show : bool, optional
+            Whether to display the plot, by default False
+        figsize : Tuple[int, int], optional
+            Size of the figure, by default (10, 10)
+        ax : Optional[plt.Axes], optional
+            Matplotlib Axes to plot on, by default None (creates new figure)
+        legend_labels : Optional[Dict[int, str]], optional
+            Dictionary mapping cluster indices to labels for legend, by default None
+
+        Returns
+        -------
+        plt.Axes
+            The matplotlib Axes object containing the plot.
         """
         if ax is None:
             plt.figure(figsize=figsize)

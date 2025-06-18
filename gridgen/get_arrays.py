@@ -38,14 +38,6 @@ def transform_df_to_array(df: pd.DataFrame, target_dict: dict, array_shape: tupl
     return output_array
 
 
-    # # Iterate over the dataframe and update the array
-    # for _, row in df.iterrows():
-    #     x = int(row['X'])
-    #     y = int(row['Y'])
-    #     target = row['target']
-    #
-    #     target_index = target_dict[target]
-    #     output_array[x, y, target_index] = 1
 
 
 
@@ -97,47 +89,6 @@ def get_subset_arrays_V1(df_total: pd.DataFrame, target_list: list, target_col: 
 
     return df_subset, array_subset, target_dict_subset
 
-#
-# def get_subset_arrays(df_total: pd.DataFrame, array_total: np.ndarray, target_dict_total: dict,
-#                       target_list: list, target_col: str = 'target') -> tuple:
-#     """
-#     Get a subset of the DataFrame, the corresponding slices from the total array, and the subset target dictionary.
-#
-#     Parameters
-#     ----------
-#     df_total : pd.DataFrame
-#         The input DataFrame containing the data.
-#     array_total : np.ndarray
-#         The 3D array representing the entire dataset.
-#     target_dict_total : dict
-#         A dictionary mapping each target in the total dataset to its index.
-#     target_list : list
-#         List of target values to filter the DataFrame and array.
-#     target_col : str, optional
-#         Column name in the DataFrame containing target values, by default 'target'.
-#
-#     Returns
-#     -------
-#     tuple
-#         A tuple containing:
-#         - df_subset (pd.DataFrame): The filtered DataFrame.
-#         - array_subset (np.ndarray): The subset of the array corresponding to the target_list.
-#         - target_dict_subset (dict): The subset dictionary mapping the filtered targets to indices.
-#     """
-#
-#     # Filter the DataFrame based on target_list
-#     df_subset = df_total.loc[df_total[target_col].isin(target_list)]
-#
-#     # Create a mapping from target_list to indices in the total array
-#     target_indices_subset = [target_dict_total[target] for target in target_list if target in target_dict_total]
-#
-#     # Extract the relevant slices from the array
-#     array_subset = array_total[:, :, target_indices_subset]
-#
-#     # Create the subset target dictionary
-#     target_dict_subset = {target: index for index, target in enumerate(target_list)}
-#
-#     return df_subset, array_subset, target_dict_subset
 
 def get_subset_arrays(df_total: pd.DataFrame, array_total: np.ndarray, target_dict_total: dict,
                       target_list: list, target_col: str = 'target') -> tuple:

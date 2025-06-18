@@ -1,7 +1,7 @@
-gridgen.contours module
+gridgen.get_arrays module
 =======================
 
-.. automodule:: gridgen.contours
+.. automodule:: gridgen.get_arrays
    :members:
    :undoc-members:
    :show-inheritance:
