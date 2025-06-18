@@ -30,14 +30,32 @@ def timeit(func):
     return wrapper
 
 class GetMasks:
+    """
+    Class to handle mask processing operations such as filtering, creation, morphology, subtraction, saving, and plotting.
+
+    Parameters
+    ----------
+    logger : logging.Logger, optional
+        Logger instance for logging messages. If None, a default logger is configured.
+    image_shape : tuple of int, optional
+        Tuple representing the shape of the image (height, width).
+    """
+
     def __init__(self, logger: Optional[logging.Logger] = None, image_shape: Optional[Tuple[int, int]] = None):
         """
         Initialize the GetMasks class.
 
-        :param logger: Logger instance for logging messages. If None, a default logger is configured.
-        :param image_shape: Tuple representing the shape of the image (height, width).
-        """
+        Parameters
+        ----------
+        logger : logging.Logger, optional
+            Logger instance for logging messages. If None, a default logger is created.
+        image_shape : tuple of int, optional
+            Tuple representing the shape of the image (height, width).
 
+        Returns
+        -------
+        None
+        """
         self.image_shape = image_shape
         self.height = self.image_shape[0] if self.image_shape is not None else None
         self.width = self.image_shape[1] if self.image_shape is not None else None
@@ -46,11 +64,19 @@ class GetMasks:
 
     def filter_binary_mask_by_area(self, mask: np.ndarray, min_area: int) -> np.ndarray:
         """
-        Removes small connected components from a binary mask.
+        Remove small connected components from a binary mask.
 
-        :param mask: Binary mask (0 or 1).
-        :param min_area: Minimum area threshold.
-        :return: Filtered binary mask.
+        Parameters
+        ----------
+        mask : np.ndarray
+            Binary mask (0 or 1).
+        min_area : int
+            Minimum area threshold.
+
+        Returns
+        -------
+        np.ndarray
+            Filtered binary mask.
         """
         num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask.astype(np.uint8), connectivity=8)
 
@@ -63,12 +89,19 @@ class GetMasks:
 
     def filter_labeled_mask_by_area(self, mask: np.ndarray, min_area: int) -> np.ndarray:
         """
-        Filters a labeled mask, keeping only components >= min_area. Preserves label IDs.
+        Filter a labeled mask by keeping only components with area >= min_area.
 
-        :param mask: Input labeled mask (integers, not binary).
-        :param min_area: Minimum area threshold.
-        :param logger: Optional logger for debug info.
-        :return: Filtered labeled mask.
+        Parameters
+        ----------
+        mask : np.ndarray
+            Input labeled mask (integer labels).
+        min_area : int
+            Minimum area threshold.
+
+        Returns
+        -------
+        np.ndarray
+            Filtered labeled mask preserving label IDs.
         """
         mask = mask.astype(np.int32)
         unique_labels, counts = np.unique(mask, return_counts=True)
@@ -85,10 +118,22 @@ class GetMasks:
 
     def create_mask(self, contours: List[np.ndarray]) -> np.ndarray:
         """
-        Creates a binary mask from given contours.
+        Create a binary mask from contours.
 
-        :param contours: List of contours (numpy arrays).
-        :return: Binary mask as a numpy array.
+        Parameters
+        ----------
+        contours : list of np.ndarray
+            List of contours.
+
+        Returns
+        -------
+        np.ndarray
+            Binary mask.
+
+        Raises
+        ------
+        ValueError
+            If image shape is not defined.
         """
         if self.height is None or self.width is None:
             raise ValueError("Image shape must be defined to create mask.")
@@ -98,25 +143,40 @@ class GetMasks:
 
     def fill_holes(self, mask: np.ndarray) -> np.ndarray:
         """
-        Fills holes inside a binary mask using contours.
+        Fill holes inside a binary mask.
 
-        :param mask: Binary mask.
-        :return: Hole-filled binary mask.
+        Parameters
+        ----------
+        mask : np.ndarray
+            Binary mask.
+
+        Returns
+        -------
+        np.ndarray
+            Hole-filled binary mask.
         """
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         filled_mask = np.zeros_like(mask)
         cv2.drawContours(filled_mask, contours, -1, color=1, thickness=cv2.FILLED)
         return filled_mask
 
-
     def apply_morphology(self, mask: np.ndarray, operation: str = "open", kernel_size: int = 3) -> np.ndarray:
         """
-        Applies morphological operations to refine binary masks.
+        Apply morphological operations to a binary mask.
 
-        :param mask: Binary mask to be processed.
-        :param operation: Type of morphological operation: "open", "close", "erode", or "dilate".
-        :param kernel_size: Size of the structuring element.
-        :return: Processed binary mask.
+        Parameters
+        ----------
+        mask : np.ndarray
+            Binary mask to process.
+        operation : str, optional
+            Morphological operation: "open", "close", "erode", or "dilate" (default is "open").
+        kernel_size : int, optional
+            Size of the structuring element (default is 3).
+
+        Returns
+        -------
+        np.ndarray
+            Processed binary mask.
         """
         kernel = np.ones((kernel_size, kernel_size), np.uint8)
 
@@ -137,11 +197,19 @@ class GetMasks:
 
     def subtract_masks(self, base_mask: np.ndarray, *masks: np.ndarray) -> np.ndarray:
         """
-        Subtracts multiple masks from a base mask.
+        Subtract one or more masks from a base mask.
 
-        :param base_mask: The initial binary mask.
-        :param masks: One or more masks to subtract.
-        :return: Resulting mask after subtraction.
+        Parameters
+        ----------
+        base_mask : np.ndarray
+            Initial binary mask.
+        *masks : np.ndarray
+            Masks to subtract from the base mask.
+
+        Returns
+        -------
+        np.ndarray
+            Resulting mask after subtraction.
         """
         result_mask = base_mask.copy()
         for mask in masks:
@@ -151,46 +219,76 @@ class GetMasks:
 
     def save_masks_npy(self, mask: np.ndarray, save_path: str) -> None:
         """
-        Save the mask as a .npy file.
+        Save mask as a .npy file.
 
-        :param mask: Mask to be saved.
-        :param save_path: Path where the mask will be saved.
+        Parameters
+        ----------
+        mask : np.ndarray
+            Mask to save.
+        save_path : str
+            Path to save the .npy file.
+
+        Returns
+        -------
+        None
         """
         np.save(save_path, mask)
         self.logger.info(f'Mask saved at {save_path}')
 
     def save_masks(self, mask: np.ndarray, path: str) -> None:
         """
-        Save the mask as an image file.
+        Save mask as an image file.
 
-        :param mask: Mask to be saved.
-        :param path: Path where the mask will be saved.
+        Parameters
+        ----------
+        mask : np.ndarray
+            Binary mask to save.
+        path : str
+            Path to save the image file.
+
+        Returns
+        -------
+        None
         """
         cv2.imwrite(path, mask * 255)
         self.logger.info(f'Mask saved at {path}')
 
     def plot_masks(
-        self,
-        masks: List[np.ndarray],
-        mask_names: List[str],
-        background_color: Tuple[int, int, int] = (0, 0, 0),
-        mask_colors: Optional[Dict[str, Tuple[int, int, int]]] = None,
-        path: Optional[str] = None,
-        show: bool = True,
-        ax: Optional[plt.Axes] = None,
-        figsize: Tuple[int, int] = (10, 10)
+            self,
+            masks: List[np.ndarray],
+            mask_names: List[str],
+            background_color: Tuple[int, int, int] = (0, 0, 0),
+            mask_colors: Optional[Dict[str, Tuple[int, int, int]]] = None,
+            path: Optional[str] = None,
+            show: bool = True,
+            ax: Optional[plt.Axes] = None,
+            figsize: Tuple[int, int] = (10, 10)
     ) -> None:
         """
-        Plots the given masks with their corresponding names.
+        Plot multiple masks with their corresponding names.
 
-        :param masks: List of masks to plot.
-        :param mask_names: List of names corresponding to the masks.
-        :param background_color: Tuple to use for areas not assigned in any mask.
-        :param mask_colors: Dictionary mapping mask names to colors.
-        :param path: Directory path where the plots will be saved.
-        :param show: Whether to display the plot.
-        :param ax: Matplotlib axis object. If None, a new figure will be created.
-        :param figsize: Tuple representing the figure size (width, height) in inches.
+        Parameters
+        ----------
+        masks : list of np.ndarray
+            List of masks to plot.
+        mask_names : list of str
+            Names corresponding to each mask.
+        background_color : tuple of int, optional
+            RGB color tuple for background areas (default (0, 0, 0)).
+        mask_colors : dict, optional
+            Mapping of mask names to RGB colors.
+        path : str, optional
+            Directory path to save the plot image.
+        show : bool, optional
+            Whether to display the plot (default True).
+        ax : matplotlib.axes.Axes, optional
+            Matplotlib axis to plot on. Creates new figure if None.
+        figsize : tuple of int, optional
+            Size of the figure in inches (width, height).
+
+        Returns
+        -------
+        None
         """
         if len(masks) != len(mask_names):
             self.logger.error('The number of masks and mask names must be the same.')
@@ -258,14 +356,33 @@ class GetMasks:
 
 # CancerStromaInterfaceanalysis
 class ConstrainedMaskExpansion(GetMasks):
-    """    Class for expanding a seed mask with constraints, generating binary, labeled, and referenced expansions.
     """
+    Class for expanding a seed mask with constraints, generating binary, labeled, and referenced expansions.
+    """
+
     def __init__(
-        self,
-        seed_mask: np.ndarray,
-        constraint_mask: Optional[np.ndarray] = None,
-        logger: Optional[logging.Logger] = None,
+            self,
+            seed_mask: np.ndarray,
+            constraint_mask: Optional[np.ndarray] = None,
+            logger: Optional[logging.Logger] = None,
     ) -> None:
+        """
+        Initialize the ConstrainedMaskExpansion object.
+
+        Parameters
+        ----------
+        seed_mask : np.ndarray
+            Binary seed mask to expand (non-zero labeled regions).
+        constraint_mask : np.ndarray, optional
+            Binary mask to limit the expansion area. If None, no constraint is applied.
+        logger : logging.Logger, optional
+            Logger instance for logging messages.
+
+        Raises
+        ------
+        ValueError
+            If seed_mask is None.
+        """
         if seed_mask is None:
             raise ValueError("Seed mask cannot be None.")
 
@@ -291,12 +408,20 @@ class ConstrainedMaskExpansion(GetMasks):
         restrict_to_limit: bool = True,
     ) -> None:
         """
-        Expands the seed mask outward by specified pixel distances and stores binary, labeled,
-        and label-propagated expansion masks.
+        Expand the seed mask outward by specified pixel distances with optional area filtering and constraints.
 
-        :param expansion_pixels: List of expansion distances (in pixels) from the seed mask.
-        :param min_area: Optional minimum area for keeping connected components in each expansion ring.
-        :param restrict_to_limit: If True, expansion is limited to the constraint mask.
+        Parameters
+        ----------
+        expansion_pixels : list of int
+            List of expansion distances (in pixels) from the seed mask.
+        min_area : int, optional
+            Minimum area threshold for keeping connected components in each expansion ring.
+        restrict_to_limit : bool, optional
+            If True, limit the expansion within the constraint mask.
+
+        Returns
+        -------
+        None
         """
         sorted_dists = sorted(expansion_pixels)
         dist_map = distance_transform_edt(self.seed_mask == 0)
@@ -339,14 +464,21 @@ class ConstrainedMaskExpansion(GetMasks):
         self.labeled_expansions["constraint_remaining"] = np.zeros_like(self.seed_mask, dtype=np.int32)
         self.referenced_expansions["constraint_remaining"] = np.zeros_like(self.seed_mask, dtype=np.int32)
 
-
     def propagate_labels(self, seed_labeled: np.ndarray, expansion_mask: np.ndarray) -> np.ndarray:
         """
-        Propagates labels from the seed labeled mask into the expansion region using morphological dilation.
+        Propagate labels from the seed labeled mask into the expansion region using iterative morphological dilation.
 
-        :param seed_labeled: Labeled seed mask (non-zero values represent different components).
-        :param expansion_mask: Binary mask representing the region where labels should propagate.
-        :return: Labeled mask with propagated labels in the expansion area.
+        Parameters
+        ----------
+        seed_labeled : np.ndarray
+            Labeled seed mask where non-zero values indicate components.
+        expansion_mask : np.ndarray
+            Binary mask indicating the expansion region to propagate labels into.
+
+        Returns
+        -------
+        np.ndarray
+            Labeled mask with propagated labels in the expansion area.
         """
         output = np.zeros_like(seed_labeled, dtype=np.int32)
         output[seed_labeled > 0] = seed_labeled[seed_labeled > 0]
@@ -385,27 +517,39 @@ class SingleClassObjectAnalysis(GetMasks):
     assigns unique labels to each expanded region, and tracks mask lineage
     through label propagation.
 
-    Attributes:
-        mask (np.ndarray): Binary mask of the object to be expanded.
-        expansion_distances (List[int]): List of expansion radii in pixels.
-        labelled_mask (np.ndarray): Resulting labeled mask with original and expanded areas.
-        binary_masks (Dict[str, np.ndarray]): Dictionary of binary masks keyed by expansion distance.
-        labelled_masks (Dict[str, np.ndarray]): Dictionary of labeled masks keyed by expansion distance.
-        reference_masks (Dict[str, np.ndarray]): Masks encoding reference to original object.
+    Attributes
+    ----------
+    mask : np.ndarray
+        Binary mask of the object to be expanded.
+    expansion_distances : List[int]
+        List of expansion radii in pixels.
+    labelled_mask : np.ndarray
+        Resulting labeled mask with original and expanded areas.
+    binary_masks : Dict[str, np.ndarray]
+        Dictionary of binary masks keyed by expansion distance.
+    labelled_masks : Dict[str, np.ndarray]
+        Dictionary of labeled masks keyed by expansion distance.
+    reference_masks : Dict[str, np.ndarray]
+        Masks encoding reference to original object.
     """
 
     def __init__(
-        self,
-        get_masks_instance: GetMasks,
-        contours_object: List[np.ndarray],
-        contour_name: str = ""
+            self,
+            get_masks_instance: GetMasks,
+            contours_object: List[np.ndarray],
+            contour_name: str = ""
     ) -> None:
         """
         Initialize SingleClassObjectAnalysis with contour data and a GetMasks utility instance.
 
-        :param get_masks_instance: Instance of GetMasks providing access to shape and filtering methods.
-        :param contours_object: List of contours representing the object.
-        :param contour_name: Optional name identifier for the object.
+        Parameters
+        ----------
+        get_masks_instance : GetMasks
+            Instance of GetMasks providing access to shape and filtering methods.
+        contours_object : List[np.ndarray]
+            List of contours representing the object.
+        contour_name : str, optional
+            Optional name identifier for the object.
         """
 
         self.get_masks_instance = get_masks_instance
@@ -421,16 +565,24 @@ class SingleClassObjectAnalysis(GetMasks):
         self.contour_name = contour_name
 
     def get_mask_objects(
-        self,
-        exclude_masks: Optional[List[np.ndarray]] = None,
-        filter_area: Optional[int] = None
+            self,
+            exclude_masks: Optional[List[np.ndarray]] = None,
+            filter_area: Optional[int] = None
     ) -> None:
         """
-        Generate binary mask from object contours, with optional subtraction of other masks
-        and area-based filtering.
+        Generate binary mask from object contours, optionally subtract other masks,
+        and apply area-based filtering.
 
-        :param exclude_masks: List of masks to subtract from the generated object mask.
-        :param filter_area: Minimum area threshold to retain components in the object mask.
+        Parameters
+        ----------
+        exclude_masks : list of np.ndarray, optional
+            List of masks to subtract from the generated object mask.
+        filter_area : int, optional
+            Minimum area threshold to retain connected components in the object mask.
+
+        Returns
+        -------
+        None
         """
         mask_object = np.zeros((self.height, self.width), dtype=np.uint8)
         cv2.drawContours(mask_object, self.contours_object, -1, color=1, thickness=cv2.FILLED)
@@ -447,17 +599,24 @@ class SingleClassObjectAnalysis(GetMasks):
         self.logger.info("Mask for objects created.")
 
     def get_objects_expansion(
-        self,
-        expansions_pixels: Optional[List[int]] = None,
-        filter_area: Optional[int] = None
+            self,
+            expansions_pixels: Optional[List[int]] = None,
+            filter_area: Optional[int] = None
     ) -> None:
         """
-        Expand the object mask using distance-based rings and optionally filter each ring
-        by minimum area. Generates binary, labeled, and propagated-label expansion masks.
+        Expand the object mask using distance-based rings and optionally filter
+        each ring by minimum area. Generates binary, labeled, and propagated-label expansion masks.
 
-        :param expansions_pixels: List of pixel distances for expansion.
-        :param filter_area: Minimum area threshold to retain components in each expansion ring.
+        Parameters
+        ----------
+        expansions_pixels : list of int, optional
+            List of pixel distances for expansion.
+        filter_area : int, optional
+            Minimum area threshold to retain connected components in each expansion ring.
 
+        Returns
+        -------
+        None
         """
         if self.mask_object_SA is None:
             self.logger.error("No object mask to expand.")
@@ -497,9 +656,17 @@ class SingleClassObjectAnalysis(GetMasks):
         """
         Propagate labeled regions from a seed mask into the expansion area using iterative dilation.
 
-        :param seed_labeled: Input labeled mask where each connected component has a unique integer label.
-        :param expansion_mask: Binary mask indicating the region where labels should expand.
-        :return: A labeled mask with labels propagated into the expansion region.
+        Parameters
+        ----------
+        seed_labeled : np.ndarray
+            Input labeled mask where each connected component has a unique integer label.
+        expansion_mask : np.ndarray
+            Binary mask indicating the region where labels should expand.
+
+        Returns
+        -------
+        np.ndarray
+            Labeled mask with labels propagated into the expansion region.
         """
         output = np.zeros_like(seed_labeled, dtype=np.int32)
         output[seed_labeled > 0] = seed_labeled[seed_labeled > 0]
@@ -528,7 +695,6 @@ class SingleClassObjectAnalysis(GetMasks):
         return output
 
 # Propagate labels: If performance is a concern, the dilation-based propagation loop can be optimized with a queue-based BFS flood-fill instead.
-
 class MultiClassObjectAnalysis(GetMasks):
     """
     Analyze and expand multiple object contours across different classes using Voronoi constraints.
@@ -536,18 +702,44 @@ class MultiClassObjectAnalysis(GetMasks):
     Constructs Voronoi diagrams to limit spatial expansion, assigns unique labels to each object,
     and tracks class-wise and parent-wise mask lineage for downstream analysis.
 
-    Attributes:
-        multiple_contours (Dict[str, List[np.ndarray]]): Input contours grouped by class.
-        height (int): Image height.
-        width (int): Image width.
-        save_path (str): Optional path to save outputs.
-        vor (scipy.spatial.Voronoi): Computed Voronoi diagram.
-        all_centroids (np.ndarray): Coordinates of centroids of input objects.
-        class_labels (List[str]): Class label for each object.
-        binary_masks, labelled_masks, referenced_masks: Output mask collections.
+    Attributes
+    ----------
+    multiple_contours : dict[str, list[np.ndarray]]
+        Input contours grouped by class.
+    height : int
+        Image height.
+    width : int
+        Image width.
+    save_path : str or None
+        Optional path to save outputs.
+    vor : scipy.spatial.Voronoi or None
+        Computed Voronoi diagram.
+    all_centroids : np.ndarray or None
+        Coordinates of centroids of input objects.
+    class_labels : list[str] or None
+        Class label for each object.
+    binary_masks : dict[str, np.ndarray]
+        Output binary masks by class and expansions.
+    labeled_masks : dict[str, np.ndarray]
+        Output labeled masks by class and expansions.
+    referenced_masks : dict[str, np.ndarray]
+        Output referenced masks mapping pixels back to parent objects.
     """
 
     def __init__(self, get_masks_instance, multiple_contours: dict, save_path: str = None):
+        """
+        Initialize MultiClassObjectAnalysis instance.
+
+        Parameters
+        ----------
+        get_masks_instance : GetMasks
+            Instance of GetMasks class with base image properties.
+        multiple_contours : dict[str, list[np.ndarray]]
+            Dictionary mapping class names to lists of contours.
+        save_path : str, optional
+            Directory path to save outputs (default is None).
+        """
+        super().__init__()
         self.get_masks_instance = get_masks_instance
 
         self.height = self.get_masks_instance.height
@@ -577,15 +769,19 @@ class MultiClassObjectAnalysis(GetMasks):
         """
         Reconstruct finite Voronoi polygons in 2D by clipping infinite regions.
 
-        Args:
-            vor (Voronoi): The original Voronoi diagram from scipy.spatial.
-            radius (float, optional): Distance to extend infinite edges.
-                                      Defaults to 2x max image dimension.
+        Parameters
+        ----------
+        vor : scipy.spatial.Voronoi
+            The original Voronoi diagram from scipy.spatial.
+        radius : float, optional
+            Distance to extend infinite edges (default is twice the maximum image dimension).
 
-        Returns:
-            Tuple[List[List[int]], np.ndarray]:
-                - List of polygon regions (as indices of vertices),
-                - Array of Voronoi vertices.
+        Returns
+        -------
+        regions : list[list[int]]
+            List of polygon regions as indices of vertices.
+        vertices : np.ndarray
+            Array of Voronoi vertices coordinates.
         """
         if vor.points.shape[1] != 2:
             raise ValueError("Requires 2D input")
@@ -640,15 +836,19 @@ class MultiClassObjectAnalysis(GetMasks):
 
         return new_regions, np.asarray(new_vertices)
 
-    def get_polygons_from_contours(self, contours):
+    def get_polygons_from_contours(self, contours: List[np.ndarray]) -> List[Polygon]:
         """
-        Converts contour point arrays into Shapely Polygon objects.
+        Convert contours into Shapely polygons.
 
-        Args:
-            contours (List[np.ndarray]): List of (N, 2) arrays representing contours.
+        Parameters
+        ----------
+        contours : list[np.ndarray]
+            List of contour arrays of shape (N, 2).
 
-        Returns:
-            List[Polygon]: Corresponding Shapely polygon objects.
+        Returns
+        -------
+        polygons : list[Polygon]
+            List of valid Shapely Polygon objects.
         """
         polygons = []
         for cnt in contours:
@@ -673,14 +873,18 @@ class MultiClassObjectAnalysis(GetMasks):
                 continue  # Defensive: skip any invalid contour
         return polygons
 
-    def derive_voronoi_from_contours(self):
+    def derive_voronoi_from_contours(self) -> None:
         """
-        Constructs a Voronoi diagram from object centroids.
+        Compute a Voronoi diagram from centroids of contours.
 
-        Computes Voronoi regions and safely clips infinite edges. Also stores
-        the corresponding regions and vertices for future use in expansion logic.
+        Computes Voronoi regions and finite polygons clipped to a large radius.
+        Stores regions, vertices, class labels, and centroids for further processing.
+
+        Raises
+        ------
+        ValueError
+            If no contours are available to derive the Voronoi diagram.
         """
-
         all_contours = [contour for contour_points in self.multiple_contours.values() for contour in contour_points if contour.shape[0] >= 4]
         if not all_contours:
             raise ValueError("No contours found to derive Voronoi diagram.")
@@ -725,37 +929,22 @@ class MultiClassObjectAnalysis(GetMasks):
         self.voronoi_regions = regions
         self.voronoi_vertices = vertices
 
-    # def get_voronoi_mask(self, category_name):
-    #     """
-    #     Creates a binary mask of Voronoi regions for a given class category.
-    #
-    #     Args:
-    #         category_name (str): The class label to extract Voronoi regions for.
-    #
-    #     Returns:
-    #         np.ndarray: Binary mask of selected Voronoi regions.
-    #     """
-    #
-    #     mask = np.zeros((self.height, self.width), dtype=np.uint8)
-    #
-    #     for idx, (label, region) in enumerate(zip(self.class_labels, self.voronoi_regions)):
-    #         if label != category_name:
-    #             continue
-    #         polygon = self.voronoi_vertices[region]
-    #         # Clip coordinates inside image boundaries
-    #         polygon[:, 0] = np.clip(polygon[:, 0], 0, self.width - 1)
-    #         polygon[:, 1] = np.clip(polygon[:, 1], 0, self.height - 1)
-    #         int_polygon = polygon.astype(np.int32)
-    #         if len(int_polygon) >= 3:
-    #             cv2.fillPoly(mask, [int_polygon], color=255)
-    #
-    #     return mask
-    def get_voronoi_mask(self, category_name):
+    def get_voronoi_mask(self, category_name: str) -> np.ndarray:
         """
-        Returns the Voronoi mask for a given category.
-        If Voronoi is unavailable (e.g. too few centroids), returns a full mask.
-        """
+        Get a binary mask for the Voronoi region of a given category.
 
+        If Voronoi regions are not computed (e.g. too few centroids), returns a full mask.
+
+        Parameters
+        ----------
+        category_name : str
+            The category/class name for which the mask is requested.
+
+        Returns
+        -------
+        mask : np.ndarray
+            Binary mask of shape (height, width) with Voronoi regions for the category.
+        """
         mask = np.zeros((self.height, self.width), dtype=np.uint8)
 
         # If Voronoi could not be computed, default to full image for that category
@@ -777,33 +966,23 @@ class MultiClassObjectAnalysis(GetMasks):
 
         return mask
 
-    #todo change this part to meet the other expansions!!!!!
-    # def expand_mask(self, mask, expansion_distance):
-    #     """
-    #     Expands a binary mask using morphological dilation.
-    #
-    #     Args:
-    #         mask (np.ndarray): The binary mask to be expanded.
-    #         expansion_distance (int): Distance (in pixels) to expand the mask.
-    #
-    #     Returns:
-    #         np.ndarray: The expanded mask minus the original mask.
-    #     """
-    #
-    #     kernel = np.ones((expansion_distance, expansion_distance), np.uint8)
-    #     expanded_mask = cv2.dilate(mask, kernel, iterations=1)
-    #     expanded_mask = cv2.subtract(expanded_mask, mask)
-    #     return expanded_mask
-    def  expand_mask(self, mask: np.ndarray, expansion_distance: int) -> np.ndarray:
+    def expand_mask(self, mask: np.ndarray, expansion_distance: int) -> np.ndarray:
         """
-        Expands a binary mask using distance transform, returning the expansion area only.
+        Expand a binary mask by a given pixel distance using distance transform.
 
-        Args:
-            mask (np.ndarray): The binary mask to be expanded.
-            expansion_distance (int): Distance (in pixels) to expand the mask.
+        The returned mask corresponds to the expansion region excluding the original mask.
 
-        Returns:
-            np.ndarray: The expanded mask minus the original mask.
+        Parameters
+        ----------
+        mask : np.ndarray
+            Binary input mask to expand.
+        expansion_distance : int
+            Number of pixels to expand the mask by.
+
+        Returns
+        -------
+        np.ndarray
+            Binary mask representing the expansion area only.
         """
         if not np.any(mask):
             return np.zeros_like(mask, dtype=np.uint8)
@@ -819,24 +998,26 @@ class MultiClassObjectAnalysis(GetMasks):
     def generate_expanded_masks_limited_by_voronoi(
             self,
             expansion_distances: list[int]
-    ) -> Tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, np.ndarray]]:
+    ) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, np.ndarray]]:
         """
-        Expands object masks for each class using Voronoi constraints.
+        Generate expanded masks for each object limited by their Voronoi regions.
 
-        Each contour is expanded outward by specified pixel distances, but limited to
-        remain within its associated Voronoi cell. All expansions are labeled and tracked.
+        For each class and its contours, original masks are created and then expanded
+        by the specified distances, clipped to the corresponding Voronoi region.
+        All expansions are labeled and tracked with parent IDs.
 
-        Args:
-            expansion_distances (List[int]): List of pixel distances for expansion rings.
+        Parameters
+        ----------
+        expansion_distances : list[int]
+            List of pixel distances for mask expansion rings.
 
-        Returns:
-            Tuple[
-                Dict[str, np.ndarray],  # binary_masks
-                Dict[str, np.ndarray],  # labelled_masks
-                Dict[str, np.ndarray]   # referenced_masks
-            ]
+        Returns
+        -------
+        tuple of dict
+            - binary_masks: dict mapping mask names to binary masks.
+            - labeled_masks: dict mapping mask names to labeled masks with unique IDs.
+            - referenced_masks: dict mapping mask names to masks referencing parent object IDs.
         """
-
         masks = {}  # Step 1: Generate masks for each contour, and label objects
         labeled_masks = {}
         referenced_labeled_mask = np.zeros((self.height, self.width), dtype=np.int32)
@@ -862,7 +1043,6 @@ class MultiClassObjectAnalysis(GetMasks):
                     exp_key = f"{category_name}_expansion_{expansion_distance}"
                     masks[exp_key] = empty_mask.copy()
                     labeled_masks[exp_key] = empty_labeled.copy()
-
 
             category_masks = []
             for contour in contours:
@@ -961,11 +1141,12 @@ class MultiClassObjectAnalysis(GetMasks):
         return self.binary_masks, self.labeled_masks, self.referenced_masks
 
     def plot_masks_with_voronoi(self,
-                                mask_colors,
-                                background_color=(255, 255, 255),
-                                show=True,
-                                axes=None,
-                                figsize=(8, 8)):
+                                mask_colors: Dict[str, Tuple[int, int, int]],
+                                background_color: Tuple[int, int, int] = (255, 255, 255),
+                                show: bool = True,
+                                axes: Optional[matplotlib.axes.Axes] = None,
+                                figsize: Tuple[int, int] = (8, 8)
+                                ) -> Optional[matplotlib.axes.Axes]:
         """
         Plots the generated masks overlaid with Voronoi edges.
 
@@ -977,7 +1158,7 @@ class MultiClassObjectAnalysis(GetMasks):
             figsize (Tuple[int, int], optional): Figure size for new plot.
 
         Returns:
-            matplotlib.axes.Axes: The plot axes (if `axes` was not provided).
+            matplotlib.axes.Axes: The plot axes (if `axes` was provided).
         """
         masks = self.binary_masks
         background = np.full((self.height, self.width, 3), background_color, dtype=np.uint8)

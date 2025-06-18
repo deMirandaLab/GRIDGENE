@@ -5,4 +5,5 @@ gridgen
    :maxdepth: 4
 
    contours
+   masks
 
