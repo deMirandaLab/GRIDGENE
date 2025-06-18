@@ -835,8 +835,7 @@ class MultiClassObjectAnalysis(GetMasks):
               ]
           """
 
-        # Step 1: Generate masks for each contour, and label objects
-        masks = {}
+        masks = {}  # Step 1: Generate masks for each contour, and label objects
         labeled_masks = {}
         referenced_labeled_mask = np.zeros((self.height, self.width), dtype=np.int32)
 

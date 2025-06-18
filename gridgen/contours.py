@@ -536,6 +536,7 @@ class KDTreeContours(GetContour):
         :param width: image width (x-max)
         """
         # Coerce kd_tree_data to DataFrame if ndarray:
+        self.radius = None
         if isinstance(kd_tree_data, np.ndarray):
             kd_tree_data = pd.DataFrame(kd_tree_data, columns=["X", "Y"])
         assert isinstance(kd_tree_data, pd.DataFrame), "kd_tree_data must be DataFrame"
@@ -570,6 +571,7 @@ class KDTreeContours(GetContour):
         -------
         None
         """
+
         self.radius = radius # max_dist
         # # Query neighbors within the radiu
         ball_tree = BallTree(self.points_x_y)
@@ -849,8 +851,8 @@ class KDTreeContours(GetContour):
         -------
         None
         """
-        # 2. Label close points with DBSCAN
-        self.label_points_with_neigbors()
+
+        self.label_points_with_neigbors()         # 2. Label close points with DBSCAN
 
         # 3. Create contours from the labeled points
         if type_contouring == 'simple_circle':
@@ -866,7 +868,6 @@ class KDTreeContours(GetContour):
     def plot_point_clusters_with_contours(self,
                                           show: bool = False,
                                           figsize: Tuple = (10, 10)) -> plt.Figure:
-
         """
            Plot DBSCAN-derived clusters and their contour boundaries.
 
@@ -908,8 +909,8 @@ class KDTreeContours(GetContour):
              - Cluster points are scattered at `(pts[:, 0], pts[:, 1])`.
              - Adjust if your coordinate convention is reversed
            """
-        # Validate that required attributes exist
-        if not hasattr(self, "contours"):
+
+        if not hasattr(self, "contours"):         # Validate that required attributes exist
             raise AttributeError("`self.contours` is not defined. Run contour-generation first.")
         if not hasattr(self, "points_w_neig") or not hasattr(self, "dbscan_labels"):
             raise AttributeError("`self.points_w_neig` or `self.dbscan_labels` not defined. Run DBSCAN steps first.")
