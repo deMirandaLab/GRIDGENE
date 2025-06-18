@@ -32,6 +32,12 @@ extensions = [
     "sphinx_autodoc_typehints",  # optional: must be installed
 ]
 
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+set_type_checking_flag = False
+always_document_param_types = False
+
+
 autosummary_generate = True
 autodoc_default_options = {
     'members': True,
