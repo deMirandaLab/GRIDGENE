@@ -40,19 +40,21 @@ def timeit(func):
         return result
     return wrapper
 
-class GetContour():
+class GetContour:
     """
-    Parent class for contour handling and filtering.
-    A class to handle contour extraction and filtering from a 3D array.
+    Parent class for contour handling and filtering from a 3D array.
+
+    This class handles extraction and filtering of contours from a 3D array where the first two
+    dimensions represent spatial coordinates (x and y), and the third dimension contains gene-specific values.
 
     Attributes
     ----------
     array : np.ndarray
-        The 3D array from which contours are to be extracted. xand y positions are the first two dimensions.
-        each gene is expected in the z dimension.
+        The 3D array from which contours are to be extracted. The first two dimensions are x and y
+        spatial positions; the third dimension corresponds to genes.
     local_sum_image : np.ndarray
         The 2D array representing the local sum of the input array.
-    contours : list
+    contours : list of np.ndarray
         List of contours extracted from the array.
     contour_name : str
         Name of the contour for identification.
@@ -61,48 +63,44 @@ class GetContour():
     contours_filtered_area : int
         Number of contours remaining after area filtering.
     logger : logging.Logger
-        Logger for logging information and errors.
-    points_x_y: np.ndarray
-        Optional 2D array of points (x, y) for plotting or further processing.
+        Logger instance for logging information and errors.
+    points_x_y : np.ndarray, optional
+        Optional 2D array of shape (N, 2) containing (x, y) points for plotting or further analysis.
+
     Methods
     -------
-    __init__(array_to_contour, logger=None, contour_name=None):
-        Initializes the GetContour class with the given array and optional logger and contour name.
-    get_conv_sum(kernel_size, kernel_shape='square'):
-        Computes the convolution sum of the array with a specified kernel.
-    check_contours():
-        Checks and processes the contours to ensure they are valid.
-    filter_contours_area(min_area_threshold):
+    __init__(array_to_contour, logger=None, contour_name=None, points_x_y=None)
+        Initializes the GetContour object.
+    check_contours()
+        Validates and closes contours.
+    filter_contours_area(min_area_threshold)
         Filters contours based on a minimum area threshold.
-    contours_from_sum(density_threshold, min_area_threshold, directionality='higher'):
-        Extracts contours from the local sum image based on a density threshold and filters them by area.
-    filter_contours_no_counts():
-        Filters contours that have no counts in the given array.
-    filter_contours_by_gene_threshold(gene_array, threshold, gene_name=""):
-        Filters contours based on a gene count threshold.
-    filter_contours_by_gene_comparison(gene_array1, gene_array2, gene_name1="", gene_name2=""):
-        Filters contours based on the comparison of gene counts between two gene arrays.
-    plot_contours_scatter(path=None, show=False, s=0.1, alpha=0.5, linewidth=1, c_points='blue', c_contours='red', figsize=(10, 10), ax=None, **kwargs):
-        Plot scatter plot with contours.
-    plot_conv_sum(cmap='plasma', c_countour='white', path=None, show=False, figsize=(10, 10), ax=None):
-        Plot the convolution sum image with contours.
-
+    filter_contours_no_counts()
+        Filters out contours with no transcript counts in the array.
+    filter_contours_by_gene_threshold(gene_array, threshold, gene_name="")
+        Filters contours based on gene-specific thresholds.
+    filter_contours_by_gene_comparison(gene_array1, gene_array2, gene_name1="", gene_name2="")
+        Filters contours where gene_array1 has higher signal than gene_array2.
+    plot_contours_scatter(...)
+        Creates a scatter plot with overlaid contours.
+    plot_conv_sum(...)
+        Plots the convolution sum image with contours.
     """
 
-    def __init__(self, array_to_contour, logger=None, contour_name=None, points_x_y:np.ndarray = None):
+    def __init__(self, array_to_contour, logger=None, contour_name=None, points_x_y: np.ndarray = None):
         """
-        Initializes the GetContour class with the given array and optional logger and contour name.
+        Initialize the contour handler with a 3D input array.
 
         Parameters
         ----------
         array_to_contour : np.ndarray
-            The 3D array from which contours are to be extracted.
+            3D array from which contours are to be derived.
         logger : logging.Logger, optional
-            Logger for logging information and errors (default is None, which configures a default logger).
+            Optional logger instance; a default logger will be used if None.
         contour_name : str, optional
-            Name of the contour for identification (default is None).
+            Optional name for this set of contours.
         points_x_y : np.ndarray, optional
-            Optional 2D array of points (x, y) for plotting or further processing (default is None).
+            Optional array of (x, y) positions for scatter plotting.
         """
         self.array = array_to_contour
         self.contours = None
@@ -118,15 +116,10 @@ class GetContour():
 
     def check_contours(self) -> None:
         """
-        Validate and process contours.
+        Validate and clean contour data.
 
-        - Excludes contours with fewer than 3 points.
-        - Ensures contours are closed (first point == last point).
-        - Converts contours to np.ndarray of dtype int32 for OpenCV compatibility.
-
-        Returns
-        -------
-        None
+        Ensures each contour has at least 3 points, closes open contours,
+        and converts them to integer format for OpenCV compatibility.
         """
 
         if not self.contours:
@@ -146,12 +139,12 @@ class GetContour():
 
     def filter_contours_area(self, min_area_threshold: float) -> None:
         """
-        Filters contours based on a minimum area threshold.
+        Filter contours by minimum area.
 
         Parameters
         ----------
         min_area_threshold : float
-            Minimum area threshold for filtering contours.
+            Contours with area below this threshold are discarded.
         """
         self.contours = [contour for contour in self.contours if cv2.contourArea(contour) >= min_area_threshold]
         # self.contours_filtered_area = len(self.contours)
@@ -159,15 +152,12 @@ class GetContour():
 
     def filter_contours_no_counts(self) -> List[np.ndarray]:
         """
-        Filters contours that have no counts in the given array.
-
-        This method iterates through each contour, creates a mask for the contour, and checks if the sum of the
-        masked array within the contour is greater than 0. Contours are kept if they have counts.
+        Remove contours that do not contain any non-zero values in the array.
 
         Returns
         -------
-        list
-            The list of valid contours that have counts.
+        List[np.ndarray]
+            Contours that contain non-zero signal in the original array.
         """
         # todo check what is more efficient
         array2d = np.sum(self.array, axis=2)
@@ -201,12 +191,17 @@ class GetContour():
 
     def filter_contours_no_counts_and_area(self, min_area_threshold: float) -> List[np.ndarray]:
         """
-        Filters contours that have no counts in the given array and are smaller than the minimum area threshold.
+        Filter contours based on both signal presence and minimum area.
+
+        Parameters
+        ----------
+        min_area_threshold : float
+            Minimum area a contour must have to be retained.
 
         Returns
         -------
         List[np.ndarray]
-            The list of contours with counts and meeting area threshold.
+            Valid contours satisfying both count and area criteria.
         """
         if self.array.ndim == 3:
             array2d = np.sum(self.array, axis=2)
@@ -243,24 +238,16 @@ class GetContour():
             gene_name: Optional[str] = ""
     ) -> None:
         """
-        Filters contours based on a gene count threshold.
-
-        This method iterates through each contour, creates a mask for the contour, and calculates the gene count
-        within the masked region. Contours are kept if the gene count is greater than or equal to the threshold.
+        Retain contours where the gene signal meets a minimum threshold.
 
         Parameters
         ----------
         gene_array : np.ndarray
-            The gene array to be checked. Can be a 2D or 3D array.
+            2D or 3D array of gene expression values.
         threshold : float
-            The gene count threshold for filtering contours.
+            Minimum gene signal required inside the contour.
         gene_name : str, optional
-            Name of the gene for logging purposes (default is an empty string).
-
-        Returns
-        -------
-        None
-            The method updates the `self.contours` attribute with the valid contours.
+            Optional name of the gene, used for logging.
         """
         valid_contours = []
         for i, contour in enumerate(self.contours):
@@ -283,27 +270,20 @@ class GetContour():
             gene_name2: Optional[str] = ""
     ) -> None:
         """
-        Filters contours based on the comparison of gene counts between two gene arrays.
+        Filter contours by comparing signal from two gene arrays.
 
-        This method iterates through each contour, creates a mask for the contour, and calculates the gene counts
-        for the given gene arrays within the masked region. Contours are kept if the gene count in `gene_array1`
-        is greater than the gene count in `gene_array2`.
+        Only retain contours where the first gene has higher counts than the second.
 
         Parameters
         ----------
         gene_array1 : np.ndarray
-            The first gene array to be compared. Can be a 2D or 3D array.
+            First gene array.
         gene_array2 : np.ndarray
-            The second gene array to be compared. Can be a 2D or 3D array.
+            Second gene array.
         gene_name1 : str, optional
-            Name of the first gene for logging purposes (default is an empty string).
+            Name for the first gene (used in logging).
         gene_name2 : str, optional
-            Name of the second gene for logging purposes (default is an empty string).
-
-        Returns
-        -------
-        None
-            The method updates the `self.contours` attribute with the valid contours.
+            Name for the second gene (used in logging).
         """
         # Ensure arrays are 2D by summing if needed
         if gene_array1.ndim == 3:
@@ -329,7 +309,6 @@ class GetContour():
         self.contours = valid_contours
         self.logger.info(f'Contours remaining after gene comparison: {len(valid_contours)}')
 
-
     # Plotting
     def plot_contours_scatter(
             self,
@@ -345,17 +324,35 @@ class GetContour():
             **kwargs: Dict[str, Any]
     ) -> Axes:
         """
-        Plot scatter plot with contours.
+        Plot a scatter plot of spatial points overlaid with contours.
 
-        :param path: Path to save the plot
-        :param show: Whether to display the plot
-        :param s: Size of scatter points
-        :param alpha: Alpha transparency of scatter points
-        :param linewidth: Line width for contours
-        :param c_points: Color of scatter points
-        :param c_contours: Color of contours
-        :param ax: Axes object to draw the plot on (default is None, plot is drawn on the current axes)
-        :param kwargs: Additional keyword arguments for scatter and plot
+        Parameters
+        ----------
+        path : str, optional
+            Directory where the plot will be saved (if specified).
+        show : bool
+            Whether to display the plot interactively.
+        s : float
+            Size of scatter points.
+        alpha : float
+            Transparency of scatter points.
+        linewidth : float
+            Width of contour lines.
+        c_points : str
+            Color for scatter points.
+        c_contours : str
+            Color for contour lines.
+        figsize : Tuple[int, int]
+            Size of the figure.
+        ax : matplotlib.axes.Axes, optional
+            Axes on which to plot; if None, a new figure is created.
+        **kwargs : dict
+            Additional keyword arguments for customizing scatter and line plots.
+
+        Returns
+        -------
+        Axes
+            The matplotlib Axes object used for plotting.
         """
         if self.points_x_y is not None:
             x = self.points_x_y[:, 0].astype(int)  # X column
@@ -391,22 +388,36 @@ class GetContour():
         return ax
 
     def plot_conv_sum(
-            self,
-            cmap: str = 'plasma',
-            c_countour: str = 'white',
-            path: Optional[str] = None,
-            show: bool = False,
-            figsize: Tuple[int, int] = (10, 10),
-            ax: Optional[Axes] = None
+        self,
+        cmap: str = 'plasma',
+        c_countour: str = 'white',
+        path: Optional[str] = None,
+        show: bool = False,
+        figsize: Tuple[int, int] = (10, 10),
+        ax: Optional[Axes] = None
     ) -> Axes:
         """
-        Plot the convolution sum image with contours.
+        Plot the local sum (convolution) image with contour overlays.
 
-        :param cmap: Colormap for the convolution sum image (default is 'plasma')
-        :param c_countour: Color for the contours (default is 'white')
-        :param path: Path to save the plot (default is None, plot is not saved)
-        :param show: Whether to display the plot (default is False)
-        :param ax: Axes object to draw the plot on (default is None, plot is drawn on the current axes)
+        Parameters
+        ----------
+        cmap : str
+            Colormap for the local sum image.
+        c_countour : str
+            Color for overlaying contours.
+        path : str, optional
+            Path to save the figure (if specified).
+        show : bool
+            Whether to display the plot interactively.
+        figsize : Tuple[int, int]
+            Size of the figure.
+        ax : matplotlib.axes.Axes, optional
+            Axes on which to plot; if None, a new figure is created.
+
+        Returns
+        -------
+        Axes
+            The matplotlib Axes object used for plotting.
         """
         if ax is None:
             plt.figure(figsize=figsize)
@@ -445,10 +456,30 @@ class GetContour():
 
 class ConvolutionContours(GetContour):
     """
-    Subclass for convolution-based contour generation.
+    A subclass of GetContour for generating contours based on a convolution
+    of the input array. This class provides methods for computing a local
+    density map and extracting contours based on intensity thresholds.
+
+    Attributes
+    ----------
+    local_sum_image : np.ndarray or None
+        2D array containing the result of convolution on the input data,
+        used as a basis for contour detection.
     """
 
     def __init__(self, array_to_contour: np.ndarray, logger=None, contour_name: Optional[str] = None):
+        """
+        Initialize the ConvolutionContours instance.
+
+        Parameters
+        ----------
+        array_to_contour : np.ndarray
+            3D input array used to compute the convolution-based contours.
+        logger : logging.Logger, optional
+            Optional logger instance for debugging and logging purposes.
+        contour_name : str, optional
+            Optional identifier for this contour set.
+        """
         # Initialize parent class attributes
         super().__init__(array_to_contour, logger, contour_name)
         # Initialize subclass-specific attributes
@@ -457,14 +488,19 @@ class ConvolutionContours(GetContour):
     @timeit
     def get_conv_sum(self, kernel_size: int, kernel_shape: str = 'square') -> None:
         """
-        Computes the convolution sum of the array with a specified kernel.
+        Compute a 2D convolution sum across the 3D input array to create a density map.
 
         Parameters
         ----------
         kernel_size : int
-            Size of the kernel to be used for convolution.
+            The size of the convolution kernel.
         kernel_shape : str, optional
-            Shape of the kernel ('square' or 'circle'), by default 'square'.
+            Shape of the kernel: either 'square' or 'circle'. Defaults to 'square'.
+
+        Raises
+        ------
+        ValueError
+            If `kernel_shape` is not one of {'square', 'circle'}.
         """
         if kernel_shape not in {'square', 'circle'}:
             raise ValueError("kernel_shape must be either 'square' or 'circle'.")
@@ -481,20 +517,33 @@ class ConvolutionContours(GetContour):
 
     @timeit
     def contours_from_sum(
-            self, density_threshold: float, min_area_threshold: float,
-            directionality: str = 'higher') -> None:
+            self,
+            density_threshold: float,
+            min_area_threshold: float,
+            directionality: str = 'higher'
+    ) -> None:
         """
-       Extracts contours from the local sum image based on a density threshold and filters them by area.
+        Generate contours from the convolution sum using a threshold, and filter by area.
 
-       Parameters
-       ----------
-       density_threshold : float
-           Density threshold for extracting contours.
-       min_area_threshold : float
-           Minimum area threshold for filtering contours.
-       directionality : str, optional
-           Directionality for finding contours ('higher' or 'lower'), by default 'higher'.
-       """
+        Parameters
+        ----------
+        density_threshold : float
+            The threshold applied to the convolution image to create a binary mask.
+        min_area_threshold : float
+            Minimum area that a contour must have to be retained.
+        directionality : str, optional
+            Direction of thresholding:
+            - 'higher': select pixels greater than the threshold
+            - 'lower': select pixels less than the threshold
+            Default is 'higher'.
+
+        Raises
+        ------
+        RuntimeError
+            If the convolution sum image (`local_sum_image`) has not been computed.
+        ValueError
+            If `directionality` is not 'higher' or 'lower'.
+        """
         if self.local_sum_image is None:
             raise RuntimeError("local_sum_image is not computed. Run get_conv_sum() first.")
 
@@ -515,8 +564,27 @@ class ConvolutionContours(GetContour):
 
 class KDTreeContours(GetContour):
     """
-    KDTreeContours extends GetContour to analyze spatial point data using KD-tree,
-    neighbors count, and derive contours via DBSCAN clustering and various hulls.
+    A subclass of GetContour for generating contours from spatial point data
+    using KD-tree or BallTree-based neighbor counts, clustering, and geometric hulls.
+
+    This class supports estimating local point densities via neighbor search,
+    extracting density-based arrays, applying clustering (e.g., DBSCAN),
+    and generating contours from those clusters using circle or concave hulls.
+
+    Attributes
+    ----------
+    kd_tree_data : pd.DataFrame
+        Input coordinate data, with 'X' and 'Y' columns.
+    points_x_y : np.ndarray
+        Array of shape (n_samples, 2) containing the input (X, Y) coordinates.
+    height : int
+        Height of the image space (used to define output array size).
+    width : int
+        Width of the image space.
+    image_size : tuple
+        Tuple of (height+1, width+1) defining the output array dimensions.
+    radius : float
+        Radius used for neighborhood calculations and clustering.
     """
 
     def __init__(
@@ -528,12 +596,20 @@ class KDTreeContours(GetContour):
             width: Optional[int] = None,
     ):
         """
-        :param kd_tree_data: DataFrame or ndarray containing X, Y coordinate data
-                             (must contain columns or shape accordingly)
-        :param logger: optional logger for information
-        :param contour_name: name of contour, used in neighbor-count column
-        :param height: image height (y-max) for array creation
-        :param width: image width (x-max)
+        Initialize the KDTreeContours instance with spatial point data.
+
+        Parameters
+        ----------
+        kd_tree_data : Union[pd.DataFrame, np.ndarray]
+            Input data with spatial X, Y coordinates. If ndarray, it must be of shape (n, 2).
+        logger : logging.Logger, optional
+            Optional logger for debugging or information output.
+        contour_name : str, optional
+            Optional name for labeling neighbor count columns and logs.
+        height : int, optional
+            Optional height (Y-extent) of the output image grid. Defaults to max Y in data.
+        width : int, optional
+            Optional width (X-extent) of the output image grid. Defaults to max X in data.
         """
         # Coerce kd_tree_data to DataFrame if ndarray:
         self.radius = None
@@ -557,24 +633,18 @@ class KDTreeContours(GetContour):
         )
 
     @timeit
-    def get_kdt_dist(self, radius:int) -> None:
+    def get_kdt_dist(self, radius: int) -> None:
         """
-        Compute neighbor counts using BallTree and add column to kd_tree_data.
+        Compute the number of neighbors for each point using BallTree within a given radius.
 
-        This method uses BallTree to find neighbors within a specified radius
-        and adds a new column to the kd_tree_data DataFrame with the count of neighbors.
+        The neighbor count is stored in a new column of `kd_tree_data` named
+        '{contour_name}_neighbor_count'.
 
         Parameters
         ----------
         radius : int
-            The radius within which to count neighbors for each point.
-            This is the maximum distance to consider a point as a neighbor.
-
-        Returns
-        -------
-        None
+            Search radius used to define neighborhood around each point.
         """
-
         self.radius = radius # max_dist
         # # Query neighbors within the radiu
         ball_tree = BallTree(self.points_x_y)
@@ -587,7 +657,14 @@ class KDTreeContours(GetContour):
     @timeit
     def get_neighbour_array(self) -> np.ndarray:
         """
-        Construct a 2D array of neighbor counts indexed by rounded integer coordinates.
+        Create a 2D array where each pixel value corresponds to the neighbor count
+        at the rounded integer (X, Y) location of the points.
+
+        Returns
+        -------
+        np.ndarray
+            2D array with shape (height+1, width+1) where each pixel represents
+            the number of neighbors for that spatial location.
         """
         self.array_total_nei = np.zeros((self.height + 1, self.width + 1))
 
@@ -599,36 +676,46 @@ class KDTreeContours(GetContour):
         self.array_total_nei[x_indices, y_indices] = values
 
         return self.array_total_nei
+
     def interpolate_array(self) -> np.ndarray:
         """
-        Fill zeros in array_total_nei via OpenCV inpainting.
+        Fill zero values in the neighbor count array using OpenCV inpainting.
+
+        This helps in smoothing sparse or missing regions in the data grid.
+
+        Returns
+        -------
+        np.ndarray
+            Inpainted version of `array_total_nei`.
         """
         assert hasattr(self, "array_total_nei"), "Call get_neighbour_array first"
 
         # Convert zeros to NaN to create a mask
         mask = (self.array_total_nei == 0).astype(np.uint8)  # Mask of missing values
         self.array_total_nei = cv2.inpaint(self.array_total_nei.astype(np.float32), mask, inpaintRadius=3,
-                                                 flags=cv2.INPAINT_TELEA)
+                                           flags=cv2.INPAINT_TELEA)
         return self.array_total_nei
-
 
     # same as covcontours_from_sum. change this future version
     @timeit
-    def contours_from_neighbors(
-            self, density_threshold: float, min_area_threshold: float,
-            directionality: str = 'higher') -> None:
+    def contours_from_neighbors(self, density_threshold: float, min_area_threshold: float,
+                                directionality: str = 'higher') -> None:
         """
-       Extracts contours from the local sum image based on a density threshold and filters them by area.
+        Extract contours from a local sum image using a density threshold.
 
-       Parameters
-       ----------
-       density_threshold : float
-           Density threshold for extracting contours.
-       min_area_threshold : float
-           Minimum area threshold for filtering contours.
-       directionality : str, optional
-           Directionality for finding contours ('higher' or 'lower'), by default 'higher'.
-       """
+        Parameters
+        ----------
+        density_threshold : float
+            Density threshold for extracting contours.
+        min_area_threshold : float
+            Minimum area threshold to keep a contour.
+        directionality : str, optional
+            Direction to threshold ('higher' or 'lower'), by default 'higher'.
+
+        Returns
+        -------
+        None
+        """
         if self.array_total_nei is None:
             raise RuntimeError("local_sum_image is not computed. Run get_conv_sum() first.")
 
@@ -652,20 +739,19 @@ class KDTreeContours(GetContour):
 
     def find_points_with_neighoors(self, radius: float, min_neighbours: int) -> None:
         """
-        Find points in the array with neighbors within a given radius.
-        This method uses KDTree to efficiently find points that have a specified number of neighbors
-        within a given radius.
+        Find points with neighbors within a given radius using KDTree.
+
         Parameters
         ----------
         radius : float
-            The radius within which to search for neighbors.
+            Search radius to find neighbors around each point.
         min_neighbours : int
-            Minimum number of neighbors required for a point to be considered valid.
+            Minimum number of neighbors for a point to be considered valid.
+
         Returns
         -------
         None
         """
-
         self.radius = radius # todo add check for array_points
         self.min_neighbours = min_neighbours
 
@@ -687,13 +773,10 @@ class KDTreeContours(GetContour):
 
     def label_points_with_neigbors(self) -> None:
         """
-        Run DBSCAN clustering on points_w_neig.
-        This method labels points with neighbors using DBSCAN clustering.
-        It uses the radius and minimum number of neighbors to form clusters.
-        The resulting labels are stored in self.dbscan_labels.
-        Parameters
-        ----------
-        None
+        Label clustered points with DBSCAN based on neighbor relationships.
+
+        Uses the radius and minimum number of neighbors to identify point clusters.
+
         Returns
         -------
         None
@@ -710,9 +793,13 @@ class KDTreeContours(GetContour):
 
     def contours_from_kd_tree_simple_circle(self) -> None:
         """
-        Draw circular hull around each DBSCAN cluster.
-        This method generates contours by creating circles around each cluster of points identified by DBSCAN.
-        Each circle is centered at the centroid of the cluster and has a radius that encompasses all points in the cluster.
+        Create contours using circular masks centered on DBSCAN clusters.
+
+        A circle is drawn around each cluster, with a radius covering all points.
+
+        Returns
+        -------
+        None
         """
         contours_list = []
         unique_labels = set(self.dbscan_labels)
@@ -748,14 +835,12 @@ class KDTreeContours(GetContour):
 
     def contours_from_kd_tree_concave_hull(self, alpha: float = 0.1) -> None:
         """
-        Generate contours using concave hulls (alpha shapes).
-        Still in development, not working properly.
+        Create contours using concave hulls (alpha shapes) on DBSCAN clusters.
 
         Parameters
         ----------
         alpha : float
-            Alpha parameter for the alpha shape. Smaller values make the hull tighter, while larger
-            values make it looser (closer to a convex hull).
+            Alpha parameter controlling the shape tightness. Smaller values yield tighter shapes.
 
         Returns
         -------
@@ -793,8 +878,13 @@ class KDTreeContours(GetContour):
 
     def contours_from_kd_tree_complex_hull(self) -> None:
         """
-        Draw convex hulls around clusters using scipy.ConvexHull.
-        Still in development, not working properly.
+        Create contours using convex hulls from DBSCAN clusters.
+
+        Uses scipy.spatial.ConvexHull to wrap cluster points.
+
+        Returns
+        -------
+        None
         """
         # todo not working properly
         contours_list = []
@@ -836,28 +926,22 @@ class KDTreeContours(GetContour):
     # def refine_contours(self):
     #     pass
 
-    def get_contours_around_points_with_neighboors(self, type_contouring : str ='simple_circle') -> None:
+    def get_contours_around_points_with_neighboors(self, type_contouring: str = 'simple_circle') -> None:
         """
-            Get contours around points with neighbors using KDTree and DBSCAN.
+        Generate contours around points with neighbors using KDTree + DBSCAN.
 
-            This method performs the following steps:
-            1. Label close points using DBSCAN clustering.
-            2. Create contours based on the labeled points using different contouring methods.
-            3. Check the validity of the contours and store the count of valid contours.
+        Parameters
+        ----------
+        type_contouring : str, default='simple_circle'
+            Method for generating contours:
+            - 'simple_circle' : Circles around clusters.
+            - 'complex_hull'  : Convex hulls around clusters.
+            - 'concave_hull'  : Concave hulls (alpha shapes) around clusters.
 
-            Parameters
-            ----------
-            type_contouring : str, default 'simple_circle'
-                Type of contouring to use. Options are:
-                - 'simple_circle': draw circles around clusters.
-                - 'complex_hull': draw convex hulls around clusters.
-                - 'concave_hull': draw concave hulls (alpha shapes) around clusters.
-
-            Returns
-            -------
-            None
-            """
-
+        Returns
+        -------
+        None
+        """
         self.label_points_with_neigbors()         # 2. Label close points with DBSCAN
 
         # 3. Create contours from the labeled points
@@ -871,46 +955,21 @@ class KDTreeContours(GetContour):
         self.check_contours()
         self.total_valid_contours = len(self.contours)
 
-    def plot_point_clusters_with_contours(self,
-                                          show: bool = False,
-                                          figsize: Tuple = (10, 10)) -> plt.Figure:
+    def plot_point_clusters_with_contours(self, show: bool = False, figsize: Tuple = (10, 10)) -> plt.Figure:
         """
-        Plot DBSCAN-derived clusters and their contour boundaries.
-
-        This method plots each contour in `self.contours` and overlays the clustered points
-        (from `self.points_w_neig` and `self.dbscan_labels`). Contours are expected to be arrays
-        of shape (N, 1, 2) or (N, 2); the singleton middle dimension is squeezed out automatically.
+        Plot DBSCAN clusters with overlayed contour boundaries.
 
         Parameters
         ----------
         show : bool, default=False
-            If True, the plot is immediately displayed via `plt.show()`. If False, the Figure
-            object is returned for further manipulation or testing, and no immediate `show()` is called.
-        figsize : tuple of int (width, height), default=(10, 10)
-            Size of the figure in inches.
+            Whether to call `plt.show()` immediately.
+        figsize : tuple, default=(10, 10)
+            Size of the plot in inches.
 
         Returns
         -------
         matplotlib.figure.Figure
-            The created Figure object containing the cluster and contour plot.
-            If `show=True`, the figure is still returned after display.
-
-        Raises
-        ------
-        AttributeError
-            If `self.contours`, `self.points_w_neig`, or `self.dbscan_labels` are not set prior to calling.
-        ValueError
-            If any contour cannot be interpreted as a sequence of 2D points after squeezing.
-
-        Notes
-        -----
-        - Expects:
-          - `self.contours`: sequence of NumPy arrays, each representing a contour of shape (N, 1, 2) or (N, 2).
-          - `self.points_w_neig`: NumPy array of shape (M, 2) containing clustered point coordinates.
-          - `self.dbscan_labels`: 1D array of length M containing integer labels from DBSCAN.
-        - Points with label `-1` (noise) are skipped.
-        - Coordinate convention: plots use x = arr[:, 0], y = arr[:, 1]. Adjust if your data uses reversed axes.
-
+            The figure object for the plot.
         """
 
         if not hasattr(self, "contours"):         # Validate that required attributes exist
@@ -971,47 +1030,21 @@ class KDTreeContours(GetContour):
 
         return plt
 
-    def plot_dbscan_labels(
-            self,
-            show: bool = True,
-            figsize: Tuple[int, int] = (8, 8)
-    ) -> Figure:
+    def plot_dbscan_labels(self, show: bool = True, figsize: Tuple[int, int] = (8, 8)) -> Figure:
         """
-        Plot points colored by DBSCAN labels (clusters vs noise).
-
-        This method creates a scatter plot of the points in `self.points_w_neig`, coloring each
-        point according to its label in `self.dbscan_labels`. Noise points (label = -1) are plotted
-        with a distinct marker/style.
+        Plot points colored by DBSCAN cluster labels.
 
         Parameters
         ----------
         show : bool, default=True
-            If True, display the plot immediately with `plt.show()`.
-            If False, return the Figure object for further manipulation or testing without showing it.
-        figsize : tuple of int (width, height), default=(8, 8)
+            Whether to call `plt.show()` immediately.
+        figsize : tuple of int, default=(8, 8)
             Size of the figure in inches.
 
         Returns
         -------
         matplotlib.figure.Figure
-            The created Figure containing the DBSCAN label plot. Returned even if `show=True`.
-
-        Raises
-        ------
-        AttributeError
-            If `self.points_w_neig` or `self.dbscan_labels` are not present.
-        ValueError
-            If `self.points_w_neig` and `self.dbscan_labels` have incompatible lengths or invalid shapes.
-
-        Notes
-        -----
-        - Expects:
-            - `self.points_w_neig`: NumPy array of shape (N, 2), the points used in DBSCAN.
-            - `self.dbscan_labels`: 1D array of length N, integer labels from DBSCAN.
-        - Points labeled `-1` are treated as noise and plotted differently (marker 'x').
-        - Uses the `tab20` colormap to assign distinct colors to each cluster label.
-        - Adds a legend, grid, and axis labels.
-        - Returns the Figure to facilitate testing (e.g., `isinstance(fig, Figure)`) and saving (e.g., `fig.savefig(...)`).
+            The figure object for the plot.
         """
         # Validate attributes exist
         if not hasattr(self, "points_w_neig") or not hasattr(self, "dbscan_labels"):
