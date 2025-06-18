@@ -560,13 +560,16 @@ class KDTreeContours(GetContour):
     def get_kdt_dist(self, radius:int) -> None:
         """
         Compute neighbor counts using BallTree and add column to kd_tree_data.
+
         This method uses BallTree to find neighbors within a specified radius
         and adds a new column to the kd_tree_data DataFrame with the count of neighbors.
+
         Parameters
         ----------
         radius : int
             The radius within which to count neighbors for each point.
             This is the maximum distance to consider a point as a neighbor.
+
         Returns
         -------
         None
@@ -647,8 +650,6 @@ class KDTreeContours(GetContour):
         self.filter_contours_no_counts_and_area(min_area_threshold)
         self.logger.info(f'Contours extracted from neighboor counts after checks: {len(self.contours)}')
 
-
-#######################################################
     def find_points_with_neighoors(self, radius: float, min_neighbours: int) -> None:
         """
         Find points in the array with neighbors within a given radius.
@@ -664,8 +665,8 @@ class KDTreeContours(GetContour):
         -------
         None
         """
-        # todo add check for array_points
-        self.radius = radius
+
+        self.radius = radius # todo add check for array_points
         self.min_neighbours = min_neighbours
 
         # Initialize KDTree with the array of points
@@ -837,20 +838,25 @@ class KDTreeContours(GetContour):
 
     def get_contours_around_points_with_neighboors(self, type_contouring : str ='simple_circle') -> None:
         """
-        Get contours around points with neighbors using KDTree and DBSCAN.
-        This method performs the following steps:
-        2. Label close points using DBSCAN clustering.
-        3. Create contours based on the labeled points using different contouring methods.
-        4. Check the validity of the contours.
-        Parameters
-        ----------
-        type_contouring : str
-            Type of contouring to use. Options are 'simple_circle', 'complex_hull', or 'concave_hull'.
-            Default is 'simple_circle'.
-        Returns
-        -------
-        None
-        """
+            Get contours around points with neighbors using KDTree and DBSCAN.
+
+            This method performs the following steps:
+            1. Label close points using DBSCAN clustering.
+            2. Create contours based on the labeled points using different contouring methods.
+            3. Check the validity of the contours and store the count of valid contours.
+
+            Parameters
+            ----------
+            type_contouring : str, default 'simple_circle'
+                Type of contouring to use. Options are:
+                - 'simple_circle': draw circles around clusters.
+                - 'complex_hull': draw convex hulls around clusters.
+                - 'concave_hull': draw concave hulls (alpha shapes) around clusters.
+
+            Returns
+            -------
+            None
+            """
 
         self.label_points_with_neigbors()         # 2. Label close points with DBSCAN
 
@@ -869,46 +875,43 @@ class KDTreeContours(GetContour):
                                           show: bool = False,
                                           figsize: Tuple = (10, 10)) -> plt.Figure:
         """
-           Plot DBSCAN-derived clusters and their contour boundaries.
+        Plot DBSCAN-derived clusters and their contour boundaries.
 
-           This method plots each contour in `self.contours` and overlays the clustered points
-           (from `self.points_w_neig` and `self.dbscan_labels`). Contours are expected to be arrays
-           of shape (N, 1, 2) or (N, 2); the singleton middle dimension is squeezed out automatically.
+        This method plots each contour in `self.contours` and overlays the clustered points
+        (from `self.points_w_neig` and `self.dbscan_labels`). Contours are expected to be arrays
+        of shape (N, 1, 2) or (N, 2); the singleton middle dimension is squeezed out automatically.
 
-           Parameters
-           ----------
-           show : bool, default=False
-               If True, the plot is immediately displayed via `plt.show()`. If False, the Figure
-               object is returned for further manipulation or testing, and no immediate `show()` is called.
-           figsize : tuple of int (width, height), default=(10, 10)
-               Size of the figure in inches.
+        Parameters
+        ----------
+        show : bool, default=False
+            If True, the plot is immediately displayed via `plt.show()`. If False, the Figure
+            object is returned for further manipulation or testing, and no immediate `show()` is called.
+        figsize : tuple of int (width, height), default=(10, 10)
+            Size of the figure in inches.
 
-           Returns
-           -------
-           matplotlib.figure.Figure
-               The created Figure object containing the cluster and contour plot.
-               If `show=True`, the figure is still returned after display.
+        Returns
+        -------
+        matplotlib.figure.Figure
+            The created Figure object containing the cluster and contour plot.
+            If `show=True`, the figure is still returned after display.
 
-           Raises
-           ------
-           AttributeError
-               If `self.contours`, `self.points_w_neig`, or `self.dbscan_labels` are not set.
-           ValueError
-               If any contour cannot be interpreted as a sequence of 2D points.
+        Raises
+        ------
+        AttributeError
+            If `self.contours`, `self.points_w_neig`, or `self.dbscan_labels` are not set prior to calling.
+        ValueError
+            If any contour cannot be interpreted as a sequence of 2D points after squeezing.
 
-           Notes
-           -----
-           - It is assumed that:
-             - `self.contours` is a sequence (e.g., list) of NumPy arrays, each representing a contour.
-               Commonly each contour has shape (N, 1, 2) as returned by OpenCV’s `findContours`, or (N, 2).
-             - `self.points_w_neig` is a NumPy array of shape (M, 2) containing the points that were clustered.
-             - `self.dbscan_labels` is a 1D array of length M containing integer cluster labels from DBSCAN.
-           - Points with label `-1` (noise) are skipped and not plotted.
-           - X vs Y axes:
-             - Contour arrays are plotted with `x = contour[:, 0]`, `y = contour[:, 1]`.
-             - Cluster points are scattered at `(pts[:, 0], pts[:, 1])`.
-             - Adjust if your coordinate convention is reversed
-           """
+        Notes
+        -----
+        - Expects:
+          - `self.contours`: sequence of NumPy arrays, each representing a contour of shape (N, 1, 2) or (N, 2).
+          - `self.points_w_neig`: NumPy array of shape (M, 2) containing clustered point coordinates.
+          - `self.dbscan_labels`: 1D array of length M containing integer labels from DBSCAN.
+        - Points with label `-1` (noise) are skipped.
+        - Coordinate convention: plots use x = arr[:, 0], y = arr[:, 1]. Adjust if your data uses reversed axes.
+
+        """
 
         if not hasattr(self, "contours"):         # Validate that required attributes exist
             raise AttributeError("`self.contours` is not defined. Run contour-generation first.")

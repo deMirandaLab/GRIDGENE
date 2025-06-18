@@ -816,24 +816,26 @@ class MultiClassObjectAnalysis(GetMasks):
         expanded_mask = expanded_mask.astype(np.uint8)  # Convert to binary mask
         return expanded_mask
 
-
-    def generate_expanded_masks_limited_by_voronoi(self, expansion_distances):
+    def generate_expanded_masks_limited_by_voronoi(
+            self,
+            expansion_distances: list[int]
+    ) -> Tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, np.ndarray]]:
         """
-          Expands object masks for each class using Voronoi constraints.
+        Expands object masks for each class using Voronoi constraints.
 
-          Each contour is expanded outward by specified pixel distances, but limited to
-          remain within its associated Voronoi cell. All expansions are labeled and tracked.
+        Each contour is expanded outward by specified pixel distances, but limited to
+        remain within its associated Voronoi cell. All expansions are labeled and tracked.
 
-          Args:
-              expansion_distances (List[int]): List of pixel distances for expansion rings.
+        Args:
+            expansion_distances (List[int]): List of pixel distances for expansion rings.
 
-          Returns:
-              Tuple[
-                  Dict[str, np.ndarray],  # binary_masks
-                  Dict[str, np.ndarray],  # labelled_masks
-                  Dict[str, np.ndarray]   # referenced_masks
-              ]
-          """
+        Returns:
+            Tuple[
+                Dict[str, np.ndarray],  # binary_masks
+                Dict[str, np.ndarray],  # labelled_masks
+                Dict[str, np.ndarray]   # referenced_masks
+            ]
+        """
 
         masks = {}  # Step 1: Generate masks for each contour, and label objects
         labeled_masks = {}

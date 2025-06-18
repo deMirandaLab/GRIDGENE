@@ -347,26 +347,59 @@ class MaskAnalysisPipeline:
 
     @timeit
     def map_hierarchies(
-        self,
-        hierarchy_definitions: Dict[str, Dict[str, Any]],
-        save_dir: Optional[str] = None
+            self,
+            hierarchy_definitions: Dict[str, Dict[str, Any]],
+            save_dir: Optional[str] = None
     ) -> pd.DataFrame:
         """
         Map child objects to their parent objects using reference labeled masks.
 
-        Args:
-            hierarchy_definitions: {
-                "child_mask_name": {
-                    "labels": reference_label_mask,
-                    "level_hierarchy": "parent_mask_name"
-                }
-            }
-            save_dir: optional path to save labeled masks.
+        Given a set of labeled mask arrays (or similar references) for child and parent objects,
+        this method builds a mapping DataFrame indicating, for each object in a “child” mask,
+        which object(s) in a specified “parent” mask it belongs to. Optionally, it can save
+        labeled masks to disk.
 
-        Returns:
-            DataFrame with columns: mask_name, object_id, parent_mask, parent_ids
+        Parameters
+        ----------
+        hierarchy_definitions : Dict[str, Dict[str, Any]]
+            A dictionary defining the hierarchy relationships. Each key is the name of a child mask,
+            and its value is another dict with at least:
+
+                - "labels": reference to the labeled mask array (e.g., a NumPy array or other structure)
+                            representing child objects.
+                - "level_hierarchy": the name of the parent mask (string) under which this child mask is nested.
+
+        save_dir : str or None, optional
+            Path to a directory where intermediate or result labeled masks (e.g., masks of parent-child
+            relationships) will be saved. If None, no files are written. If provided, the method should
+            ensure the directory exists (or create it) before saving.
+
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame containing the mapping of child objects to parent objects. Expected columns:
+
+                - mask_name : str
+                    Name of the child mask (one of the keys in `hierarchy_definitions`).
+                - object_id : int (or appropriate label type)
+                    The label identifier of an object in the child mask.
+                - parent_mask : str
+                    Name of the parent mask as given by `"level_hierarchy"` in `hierarchy_definitions`.
+                - parent_ids : list[int] (or array-like)
+                    The list (or array) of parent object IDs that this child object maps to (e.g., overlaps).
+
+            Each row corresponds to one child object; if a child overlaps multiple parents,
+            `parent_ids` may be a list/tuple/array of multiple IDs.
+
+        Raises
+        ------
+        ValueError
+            If `hierarchy_definitions` is malformed (e.g., missing required keys `"labels"` or
+            `"level_hierarchy"`), or if the referenced mask arrays have incompatible shapes.
+        OSError
+            If `save_dir` is provided but cannot be created or written to.
+
         """
-
         records = []
 
         for child_name, definition in hierarchy_definitions.items():
