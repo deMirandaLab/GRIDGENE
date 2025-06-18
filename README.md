@@ -1,8 +1,9 @@
 # GRIDGEN
 
 ![CI](https://github.com/deMirandaLab/GRIDGEN/actions/workflows/ci.yml/badge.svg)
-![Docs](https://github.com/deMirandaLab/GRIDGEN/workflows/Docs/badge.svg)
+[![Docs](https://img.shields.io/badge/docs-GitHub--Pages-blue.svg)](https://demirandalab.github.io/GRIDGEN/)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)
 
 
 **GRIDGEN** (Guided Region Identification based on Density of GENes) is a Python package designed for defining  
