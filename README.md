@@ -1,8 +1,7 @@
 # GRIDGEN
 
-![CI](https://github.com/yourusername/GRIDGEN/actions/workflows/ci.yml/badge.svg)
-![Docs](https://github.com/yourusername/GRIDGEN/workflows/Docs/badge.svg)
-![Python](https://img.shields.io/pypi/pyversions/gridgen)
+![CI](https://github.com/deMirandaLab/GRIDGEN/actions/workflows/ci.yml/badge.svg)
+![Docs](https://github.com/deMirandaLab/GRIDGEN/workflows/Docs/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 
