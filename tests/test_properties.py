@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from gridgen.mask_properties2 import MaskDefinition, MaskAnalysisPipeline
+from gridgen.mask_properties import MaskDefinition, MaskAnalysisPipeline
 from skimage.measure import label, regionprops_table
 
 
