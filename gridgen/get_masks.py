@@ -2,9 +2,11 @@ import logging
 import cv2
 import numpy as np
 import os
+import matplotlib # added for docs generation
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.cm as cm
+import matplotlib.axes
 from scipy.spatial import Voronoi, voronoi_plot_2d
 from shapely.geometry import Polygon
 from typing import Dict, List, Tuple, Union
@@ -1144,9 +1146,9 @@ class MultiClassObjectAnalysis(GetMasks):
                                 mask_colors: Dict[str, Tuple[int, int, int]],
                                 background_color: Tuple[int, int, int] = (255, 255, 255),
                                 show: bool = True,
-                                axes: Optional[matplotlib.axes.Axes] = None,
+                                axes: Optional["matplotlib.axes.Axes"] = None,
                                 figsize: Tuple[int, int] = (8, 8)
-                                ) -> Optional[matplotlib.axes.Axes]:
+                                ) -> Optional["matplotlib.axes.Axes"]:
         """
         Plots the generated masks overlaid with Voronoi edges.
 
