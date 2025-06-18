@@ -9,8 +9,7 @@ import os
 import sys
 project_root = os.path.abspath('../../')
 sys.path.insert(0, os.path.abspath('../..'))
-
-
+sys.path.insert(0, os.path.join(project_root, 'gridgen'))  # Add the 'src' directory to the path
 # ONLY add the 'src' directory to the Python path for autodoc to find your 'src' package
 
 project = 'GRIDGEN'
@@ -30,7 +29,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.mathjax',
     'myst_nb',  # Jupyter Notebook support
-
+    "sphinx_autodoc_typehints",  # optional: must be installed
 ]
 
 autosummary_generate = True
@@ -66,3 +65,31 @@ source_suffix = {
     '.rst': 'restructuredtext',
     '.md': 'markdown',
 }
+
+# Add the following at the end or in a suitable section for autodoc configuration
+autodoc_mock_imports = [
+    'numpy',
+    'pandas',
+    'skimage',  # scikit-image is imported as 'skimage'
+    'matplotlib',
+    'tqdm',
+    'cv2',      # opencv-python is imported as 'cv2'
+    'shapely',
+    'scipy',
+    'PIL',      # Pillow is imported as 'PIL'
+    'tifffile',
+    'natsort',
+    'alphashape',
+    'jupyter',  # Although jupyter/ipykernel are usually build dependencies, including them doesn't hurt.
+    'ipykernel',
+    'anndata',
+    'scanpy',
+    'openpyxl',
+    'minisom',
+    'squidpy',
+    'spatialdata',
+    'mpl_toolkits',
+    'sklearn',
+    'scikit-learn',  # scikit-learn is imported as 'sklearn'
+    'xarray'
+]
