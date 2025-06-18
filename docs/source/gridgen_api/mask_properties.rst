@@ -1,5 +1,5 @@
 gridgen.mask_properties module
-=======================
+==============================
 
 .. automodule:: gridgen.mask_properties
    :members:

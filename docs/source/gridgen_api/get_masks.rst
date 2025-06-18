@@ -5,4 +5,3 @@ gridgen.get_masks module
    :members:
    :undoc-members:
    :show-inheritance:
-   :no-index:
