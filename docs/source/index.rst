@@ -15,4 +15,4 @@ It is designed to help researchers and data scientists work with spatial transcr
    :caption: Contents:
 
    Tutorials <tutorials/index>
-   API Reference <api/index>
+   API Reference <gridgen_api/modules>
