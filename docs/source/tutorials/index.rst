@@ -3,9 +3,6 @@ Examples and Tutorials
 
 Welcome to the tutorials and getting started guide for GRIDGEN!
 
-Case Studies
-------------
-
 .. toctree::
    :maxdepth: 2
    :caption: Case Studies:
@@ -19,9 +16,6 @@ Case Studies
    ../case_studies/7_overlay_cell_segmentation.ipynb
    ../case_studies/8_alternative_ways_masking_som.ipynb
    ../case_studies/9_alternative_ways_masking_KDTree.ipynb
-
-Tutorials
----------
 
 .. toctree::
    :maxdepth: 2
