@@ -429,7 +429,7 @@ class ConstrainedMaskExpansion(GetMasks):
         dist_map = distance_transform_edt(self.seed_mask == 0)
 
         previous_mask = np.zeros_like(self.seed_mask, dtype=bool)
-
+        current_labels = self.seed_mask.copy()
         for dist in sorted_dists:
             if dist == sorted_dists[0]:
                 ring = (dist_map <= dist) & (self.seed_mask == 0)
@@ -454,8 +454,11 @@ class ConstrainedMaskExpansion(GetMasks):
             self.labeled_expansions[f"expansion_{dist}"] = label(ring.astype(np.uint8))
 
             # Store label-referenced expansion using seed_mask
-            referenced = self.propagate_labels(self.seed_mask, ring)
+            # referenced = self.propagate_labels(self.seed_mask, ring)
+            referenced = self.propagate_labels(current_labels, ring)
+            referenced[~ring] = 0
             self.referenced_expansions[f"expansion_{dist}"] = referenced
+            current_labels[referenced > 0] = referenced[referenced > 0]
 
         self.binary_expansions["seed_mask"] = (self.seed_mask > 0).astype(np.uint8)
         self.labeled_expansions["seed_mask"] = self.seed_mask.copy()
@@ -468,7 +471,8 @@ class ConstrainedMaskExpansion(GetMasks):
 
     def propagate_labels(self, seed_labeled: np.ndarray, expansion_mask: np.ndarray) -> np.ndarray:
         """
-        Propagate labels from the seed labeled mask into the expansion region using iterative morphological dilation.
+        Propagate labels from the seed labeled mask into the expansion region
+        using nearest-neighbor distance transform.
 
         Parameters
         ----------
@@ -483,33 +487,21 @@ class ConstrainedMaskExpansion(GetMasks):
             Labeled mask with propagated labels in the expansion area.
         """
         output = np.zeros_like(seed_labeled, dtype=np.int32)
+
+        # Compute distance transform on inverse of seed (background = True)
+        # Return indices of nearest labeled pixels
+        distance, indices = distance_transform_edt(seed_labeled == 0, return_indices=True)
+
+        # Use the nearest labeled pixel for expansion mask locations
+        nearest_labels = seed_labeled[tuple(indices)]
+
+        # Fill only the expansion region with nearest labels
+        output[expansion_mask.astype(bool)] = nearest_labels[expansion_mask.astype(bool)]
+
+        # Preserve original seed labels
         output[seed_labeled > 0] = seed_labeled[seed_labeled > 0]
 
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        expansion_mask = expansion_mask.astype(bool)
-        iteration = 0
-
-        while True:
-            iteration += 1
-            prev = output.copy()
-
-            mask_to_fill = (output == 0) & expansion_mask
-
-            # OpenCV only supports certain dtypes for dilation — use float32 safely
-            dilated = cv2.dilate(output.astype(np.float32), kernel)
-            dilated = dilated.astype(np.int32)
-
-            output[mask_to_fill] = dilated[mask_to_fill]
-
-            if np.array_equal(output, prev):
-                break
-            if iteration > 1000:
-                if self.logger:
-                    self.logger.warning("Label propagation exceeded 1000 iterations.")
-                break
-
         return output
-
 
 class SingleClassObjectAnalysis(GetMasks):
     """
@@ -627,32 +619,44 @@ class SingleClassObjectAnalysis(GetMasks):
         if expansions_pixels is None:
             expansions_pixels = []
 
-        seed_mask = label(self.mask_object_SA)
-        dist_map = distance_transform_edt(seed_mask == 0)
-        previous_mask = np.zeros_like(seed_mask, dtype=bool)
+        self.seed_mask = label(self.mask_object_SA)
+        dist_map = distance_transform_edt(self.seed_mask == 0)
+        previous_mask = np.zeros_like(self.seed_mask, dtype=bool)
+        current_labels = self.seed_mask.copy()
 
         for i, dist in enumerate(sorted(expansions_pixels)):
-            if i == 0:
-                ring = (dist_map <= dist) & (seed_mask == 0)
-            else:
-                prev_dist = sorted(expansions_pixels)[i - 1]
-                ring = (dist_map <= dist) & (dist_map > prev_dist) & (seed_mask == 0)
+            prev_dist = sorted(expansions_pixels)[i - 1] if i > 0 else 0
+            raw_ring = (dist_map <= dist) & (dist_map > prev_dist) & (self.seed_mask == 0)
 
-            ring &= ~previous_mask
             if filter_area:
-                ring = self.get_masks_instance.filter_binary_mask_by_area(ring.astype(np.uint8), filter_area).astype(bool)
+                raw_ring = self.get_masks_instance.filter_binary_mask_by_area(raw_ring.astype(np.uint8),
+                                                                              filter_area).astype(bool)
+            key = f"expansion_{dist}"
+
+            ring = raw_ring & (~previous_mask)
+
+            if not np.any(ring):
+                self.logger.warning(f"Expansion ring for distance {dist} is empty.")
+                empty_mask = np.zeros_like(self.seed_mask, dtype=np.uint8)
+                self.binary_expansions[key] = empty_mask
+                self.labeled_expansions[key] = empty_mask
+                self.referenced_expansions[key] = empty_mask
+                continue
 
             previous_mask |= ring
 
-            key = f"expansion_{dist}"
             self.binary_expansions[key] = ring.astype(np.uint8)
             self.labeled_expansions[key] = label(ring.astype(np.uint8))
-            self.referenced_expansions[key] = self.propagate_labels(seed_mask, ring)
+
+            referenced = self.propagate_labels(current_labels, ring)
+            referenced[~ring] = 0
+            self.referenced_expansions[key] = referenced
+            current_labels[referenced > 0] = referenced[referenced > 0]
 
         # Store the base seed info
-        self.binary_expansions["seed_mask"] = (seed_mask > 0).astype(np.uint8)
-        self.labeled_expansions["seed_mask"] = seed_mask.copy()
-        self.referenced_expansions["seed_mask"] = seed_mask.copy()
+        self.binary_expansions["seed_mask"] = (self.seed_mask > 0).astype(np.uint8)
+        self.labeled_expansions["seed_mask"] = self.seed_mask.copy()
+        self.referenced_expansions["seed_mask"] = self.seed_mask.copy()
 
     def propagate_labels(self, seed_labeled: np.ndarray, expansion_mask: np.ndarray) -> np.ndarray:
         """
@@ -671,28 +675,40 @@ class SingleClassObjectAnalysis(GetMasks):
             Labeled mask with labels propagated into the expansion region.
         """
         output = np.zeros_like(seed_labeled, dtype=np.int32)
+        # output[seed_labeled > 0] = seed_labeled[seed_labeled > 0]
+        #
+        # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        # expansion_mask = expansion_mask.astype(bool)
+        # iteration = 0
+        #
+        # while True:
+        #     iteration += 1
+        #     prev = output.copy()
+        #
+        #     mask_to_fill = (output == 0) & expansion_mask
+        #     dilated = cv2.dilate(output.astype(np.float32), kernel)
+        #     dilated = dilated.astype(np.int32)
+        #
+        #     output[mask_to_fill] = dilated[mask_to_fill]
+        #
+        #     if np.array_equal(output, prev):
+        #         break
+        #     if iteration > 1000:
+        #         if self.logger:
+        #             self.logger.warning("Label propagation exceeded 1000 iterations.")
+        #         break
+        #
+        # return output
+        distance, indices = distance_transform_edt(seed_labeled == 0, return_indices=True)
+
+        # Use the nearest labeled pixel for expansion mask locations
+        nearest_labels = seed_labeled[tuple(indices)]
+
+        # Fill only the expansion region with nearest labels
+        output[expansion_mask.astype(bool)] = nearest_labels[expansion_mask.astype(bool)]
+
+        # Preserve original seed labels
         output[seed_labeled > 0] = seed_labeled[seed_labeled > 0]
-
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        expansion_mask = expansion_mask.astype(bool)
-        iteration = 0
-
-        while True:
-            iteration += 1
-            prev = output.copy()
-
-            mask_to_fill = (output == 0) & expansion_mask
-            dilated = cv2.dilate(output.astype(np.float32), kernel)
-            dilated = dilated.astype(np.int32)
-
-            output[mask_to_fill] = dilated[mask_to_fill]
-
-            if np.array_equal(output, prev):
-                break
-            if iteration > 1000:
-                if self.logger:
-                    self.logger.warning("Label propagation exceeded 1000 iterations.")
-                break
 
         return output
 

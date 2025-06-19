@@ -428,22 +428,37 @@ class MaskAnalysisPipeline:
         records = []
 
         for child_name, definition in hierarchy_definitions.items():
-            reference_labels = definition["labels"]
+            # reference_labels = definition["labels"]
+            # parent_name = definition["level_hierarchy"]
+            #
+            # # Make sure both masks are labeled
+            # if parent_name not in self.labeled_masks:
+            #     self.labeled_masks[parent_name] = label(
+            #         next(d.mask for d in self.mask_definitions if d.mask_name == parent_name)
+            #     )
+            #     if save_dir:
+            #         os.makedirs(save_dir, exist_ok=True)
+            #         np.save(os.path.join(save_dir, f"{parent_name}_labeled.npy"), self.labeled_masks[parent_name])
+            #
+            # parent_labels = self.labeled_masks[parent_name]
+            #
+            # mapper = HierarchyMapper()
+            # hierarchy_map = mapper.map_hierarchy(reference_labels, parent_labels)
+            referenced_labels = definition["labels"]  # The parent IDs per pixel
             parent_name = definition["level_hierarchy"]
 
-            # Make sure both masks are labeled
-            if parent_name not in self.labeled_masks:
-                self.labeled_masks[parent_name] = label(
-                    next(d.mask for d in self.mask_definitions if d.mask_name == parent_name)
-                )
-                if save_dir:
-                    os.makedirs(save_dir, exist_ok=True)
-                    np.save(os.path.join(save_dir, f"{parent_name}_labeled.npy"), self.labeled_masks[parent_name])
+            # Get child labels: this corresponds to the same expansion
+            child_labels = next(
+                d for d in self.mask_definitions if d.mask_name == child_name
+            ).mask  # binary — we need to label it!
 
-            parent_labels = self.labeled_masks[parent_name]
+            if child_name not in self.labeled_masks:
+                self.labeled_masks[child_name] = label(child_labels)
+
+            labeled_child = self.labeled_masks[child_name]
 
             mapper = HierarchyMapper()
-            hierarchy_map = mapper.map_hierarchy(reference_labels, parent_labels)
+            hierarchy_map = mapper.map_hierarchy(labeled_child, referenced_labels)
 
             # Update results
             for result in self.results:
