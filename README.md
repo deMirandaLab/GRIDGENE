@@ -17,9 +17,6 @@ regions of interest based on transcript density. It enables the identification o
 - [Documentation](#documentation)
 - [Credits](#credits)
 - [License](#license)
-- [Contributing](#contributing)
-
-
 
 ## Features
 
