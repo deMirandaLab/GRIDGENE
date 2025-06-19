@@ -8,7 +8,7 @@ Case Studies
 
 .. toctree::
    :maxdepth: 2
-   :caption: Case Studies (Jupyter Notebooks):
+   :caption: Case Studies:
 
    ../case_studies/1_derive_cancer_stroma_CosMx.ipynb
    ../case_studies/2_derive_cancer_stroma_Xenium.ipynb
