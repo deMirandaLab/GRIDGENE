@@ -17,6 +17,7 @@ from typing import Optional, Tuple, Dict, Any, List
 from scipy.ndimage import distance_transform_edt
 from skimage.measure import label
 from scipy.ndimage import distance_transform_edt
+from skimage.measure import regionprops
 import cv2
 import numpy as np
 from shapely.geometry import Polygon, box
@@ -356,6 +357,60 @@ class GetMasks:
         if created_fig:
             plt.close(fig)
 
+
+    def plot_labeled_masks(self, label_mask,mask_name, show=False, save_path=None, dpi=300):
+        """
+        Plot the labeled mask with colored objects and bounding boxes.
+        Parameters
+        ----------
+        mask_dict : dict (required)
+        show    : bool (optional)
+
+        Returns
+        -------
+
+        """
+        unique_labels = np.unique(label_mask)
+
+        # Generate random colors for each label using a colormap
+        colormap = cm.get_cmap('tab10', len(unique_labels))
+        colors = {label: colormap(i) for i, label in enumerate(unique_labels) if label != 0}
+
+        # Create a colored mask
+        colored_mask = np.zeros((self.height,self.width, 3), dtype=np.float32)
+        for label in unique_labels:
+            if label == 0:
+                continue
+            colored_mask[label_mask == label] = colors[label][:3]
+
+        # Create a figure and axis to plot the mask
+        fig, ax = plt.subplots()
+        ax.imshow(colored_mask, origin='lower')
+
+        # Plot each labeled object with its corresponding color and label number
+        for region in regionprops(label_mask):
+            if region.label == 0:
+                continue
+            minr, minc, maxr, maxc = region.bbox
+            rect = mpatches.Rectangle((minc, minr), maxc - minc, maxr - minr,
+                                      fill=False, edgecolor=colors[region.label], linewidth=2)
+            ax.add_patch(rect)
+            y, x = region.centroid
+            ax.text(x, y, str(region.label), color='white', fontsize=8, ha='center', va='center')
+
+        # Set the title and show the plot
+        ax.set_title(mask_name)
+
+        # # Save the plot as a high-resolution image
+        if save_path is not None:
+            fig.savefig(save_path, dpi=dpi, bbox_inches='tight')
+
+        # Show the plot if requested
+        if show:
+            plt.show()
+
+        return fig, ax
+
 # CancerStromaInterfaceanalysis
 class ConstrainedMaskExpansion(GetMasks):
     """
@@ -466,7 +521,8 @@ class ConstrainedMaskExpansion(GetMasks):
 
         constraint_remaining = (self.constraint_mask.astype(bool) & ~previous_mask).astype(np.uint8)
         self.binary_expansions["constraint_remaining"] = constraint_remaining
-        self.labeled_expansions["constraint_remaining"] = np.zeros_like(self.seed_mask, dtype=np.int32)
+        # self.labeled_expansions["constraint_remaining"] = np.zeros_like(self.seed_mask, dtype=np.int32)
+        self.labeled_expansions["constraint_remaining"] = label(constraint_remaining)
         self.referenced_expansions["constraint_remaining"] = np.zeros_like(self.seed_mask, dtype=np.int32)
 
     def propagate_labels(self, seed_labeled: np.ndarray, expansion_mask: np.ndarray) -> np.ndarray:
