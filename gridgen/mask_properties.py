@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
 import numpy as np
 import pandas as pd
-from skimage.measure import label, regionprops_table
+from skimage.measure import label, regionprops_table, regionprops
 from gridgen.logger import get_logger
 from functools import wraps
 import os
@@ -125,38 +125,40 @@ class MorphologyExtractor:
         total_area = int(np.sum(mask))
         return [{'area': total_area, 'object_id': 'bulk'}]
 
-    def extract_grid_features(self, mask: np.ndarray, grid_size: int, parent_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    def extract_grid_features_per_object(self, labeled_mask: np.ndarray, grid_size: int) -> List[Dict[str, Any]]:
         """
-        Extract features by dividing the mask into grid tiles.
-
-        Parameters
-        ----------
-        mask : np.ndarray
-            Binary mask.
-        grid_size : int
-            Size of grid tiles.
-        parent_id : str or None, optional
-            Optional parent ID prefix for tiles, by default None.
-
-        Returns
-        -------
-        list of dict
-            List of features per grid tile.
+        Extract features per grid tile for each labeled object.
         """
-        h, w = mask.shape
-        results = []
-        for y in range(0, h, grid_size):
-            for x in range(0, w, grid_size):
-                tile = mask[y:y+grid_size, x:x+grid_size]
-                tile_area = int(np.sum(tile))
-                object_id = f'{parent_id}_grid_{x}_{y}' if parent_id else f'grid_{x}_{y}'
-                results.append({
-                    'x': x, 'y': y,
-                    'area': tile_area,
-                    'object_id': object_id
+        features = []
+        for region in regionprops(labeled_mask):
+            object_id = region.label
+            coords = region.coords  # N x 2 array: (row, col)
+            grid_map = {}
+
+            for y_px, x_px in coords:
+                gx = (x_px // grid_size) * grid_size
+                gy = (y_px // grid_size) * grid_size
+                key = (gx, gy)
+
+                if key not in grid_map:
+                    grid_map[key] = {'area': 0, 'x_sum': 0, 'y_sum': 0, 'count': 0}
+
+                grid_map[key]['area'] += 1
+                grid_map[key]['x_sum'] += x_px
+                grid_map[key]['y_sum'] += y_px
+                grid_map[key]['count'] += 1
+
+            for (gx, gy), values in grid_map.items():
+                features.append({
+                    'x': gx,
+                    'y': gy,
+                    'object_id': f'{object_id}',
+                    'area': values['area'],
+                    'centroid_x': values['x_sum'] / values['count'],
+                    'centroid_y': values['y_sum'] / values['count'],
                 })
-        return results
 
+        return features
 class GeneCounter:
     """
     Counts gene expression values within masks.
@@ -219,39 +221,37 @@ class GeneCounter:
         counts_dict['object_id'] = 'bulk'
         return [counts_dict]
 
-    def count_genes_grid(self, mask: np.ndarray, array_counts: np.ndarray, target_dict: Dict[str, int], grid_size: int) -> List[Dict[str, Any]]:
+    def count_genes_grid_per_object(self, labeled_mask: np.ndarray, array_counts: np.ndarray,
+                                    target_dict: Dict[str, int], grid_size: int) -> List[Dict[str, Any]]:
         """
-        Count genes in grid tiles.
-
-        Parameters
-        ----------
-        mask : np.ndarray
-            Binary mask.
-        array_counts : np.ndarray
-            3D gene counts.
-        target_dict : dict
-            Mapping gene to index.
-        grid_size : int
-            Size of tiles.
-
-        Returns
-        -------
-        list of dict
-            List of gene counts per grid tile.
+        Count genes per grid tile within each object.
         """
-        h, w = mask.shape
         results = []
-        for y in range(0, h, grid_size):
-            for x in range(0, w, grid_size):
-                sub_mask = mask[y:y+grid_size, x:x+grid_size].astype(bool)
-                if not np.any(sub_mask):
-                    continue
-                # counts = np.einsum('ijk,ij->k', array_counts[y:y + grid_size, x:x + grid_size].astype(np.int64),
-                #                    sub_mask.astype(np.int64))
-                counts = array_counts[y:y + grid_size, x:x + grid_size][sub_mask].sum(axis=0, dtype=np.int64)
-                counts_dict = {gene: counts[i] for gene, i in target_dict.items()}
-                counts_dict['object_id'] = f'grid_{x}_{y}'
+        for obj_id in np.unique(labeled_mask):
+            if obj_id == 0:
+                continue
+            coords = np.argwhere(labeled_mask == obj_id)
+            grid_map = {}
+
+            for y_px, x_px in coords:
+                gx = (x_px // grid_size) * grid_size
+                gy = (y_px // grid_size) * grid_size
+                key = (gx, gy)
+
+                if key not in grid_map:
+                    grid_map[key] = []
+
+                grid_map[key].append((y_px, x_px))
+
+            for (gx, gy), pixels in grid_map.items():
+                ys, xs = zip(*pixels)
+                gene_counts = array_counts[ys, xs].sum(axis=0, dtype=np.int64)
+                counts_dict = {gene: gene_counts[i] for gene, i in target_dict.items()}
+                counts_dict['object_id'] = f'{obj_id}'
+                counts_dict['x'] = gx
+                counts_dict['y'] = gy
                 results.append(counts_dict)
+
         return results
 
 class HierarchyMapper:
@@ -343,11 +343,24 @@ class MaskAnalysisPipeline:
                 counts = self.counter.count_genes_bulk(defn.mask, self.array_counts.astype(np.int16), self.target_dict)
                 merged = self._merge_dicts_by_key(morpho, counts, 'object_id')
 
+            # elif defn.analysis_type == 'grid':
+            #     if defn.grid_size is None:
+            #         raise ValueError("Grid size required for grid analysis.")
+            #     morpho = self.extractor.extract_grid_features(defn.mask, defn.grid_size)
+            #     counts = self.counter.count_genes_grid(defn.mask, self.array_counts.astype(np.int16), self.target_dict, defn.grid_size)
+            #     merged = self._merge_dicts_by_key(morpho, counts, 'object_id') if counts else morpho
             elif defn.analysis_type == 'grid':
                 if defn.grid_size is None:
                     raise ValueError("Grid size required for grid analysis.")
-                morpho = self.extractor.extract_grid_features(defn.mask, defn.grid_size)
-                counts = self.counter.count_genes_grid(defn.mask, self.array_counts.astype(np.int16), self.target_dict, defn.grid_size)
+                if defn.mask_name not in self.labeled_masks:
+                    self.labeled_masks[defn.mask_name] = label(defn.mask)
+
+                labeled = self.labeled_masks[defn.mask_name]
+
+                morpho = self.extractor.extract_grid_features_per_object(labeled, defn.grid_size)
+                counts = self.counter.count_genes_grid_per_object(
+                    labeled, self.array_counts.astype(np.int16), self.target_dict, defn.grid_size
+                )
                 merged = self._merge_dicts_by_key(morpho, counts, 'object_id') if counts else morpho
 
             else:
