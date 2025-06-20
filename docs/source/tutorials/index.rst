@@ -17,4 +17,6 @@ Welcome to the tutorials and getting started guide for GRIDGEN!
    ../case_studies/8_alternative_ways_masking_som.ipynb
    ../case_studies/9_alternative_ways_masking_KDTree.ipynb
 
+
+   ../case_studies/T_tutorial_general.ipynb
    ../case_studies/T_tutorial_hierarchy_analysis.ipynb
