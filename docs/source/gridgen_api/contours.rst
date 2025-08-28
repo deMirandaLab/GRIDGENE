@@ -1,7 +1,7 @@
-gridgen.contours module
+gridgene.contours module
 =======================
 
-.. automodule:: gridgen.contours
+.. automodule:: gridgene.contours
    :members:
    :undoc-members:
    :show-inheritance:

@@ -9,10 +9,10 @@ import os
 import sys
 project_root = os.path.abspath('../../')
 sys.path.insert(0, os.path.abspath('../..'))
-sys.path.insert(0, os.path.join(project_root, 'gridgen'))  # Add the 'src' directory to the path
+sys.path.insert(0, os.path.join(project_root, 'gridgene'))  # Add the 'src' directory to the path
 # ONLY add the 'src' directory to the Python path for autodoc to find your 'src' package
 
-project = 'GRIDGEN'
+project = 'GRIDGENE'
 copyright = '2025, AM Sequeira'
 author = 'AM Sequeira'
 release = '0.1'
