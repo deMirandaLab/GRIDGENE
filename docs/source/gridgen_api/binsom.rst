@@ -1,7 +1,7 @@
-gridgen.binsom module
+gridgene.binsom module
 =======================
 
-.. automodule:: gridgen.binsom
+.. automodule:: gridgene.binsom
    :members:
    :undoc-members:
    :show-inheritance:

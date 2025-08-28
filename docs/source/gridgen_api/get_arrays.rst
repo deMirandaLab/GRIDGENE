@@ -1,7 +1,7 @@
-gridgen.get_arrays module
+gridgene.get_arrays module
 =========================
 
-.. automodule:: gridgen.get_arrays
+.. automodule:: gridgene.get_arrays
    :members:
    :undoc-members:
    :show-inheritance:

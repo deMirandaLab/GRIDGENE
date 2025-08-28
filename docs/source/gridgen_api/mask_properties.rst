@@ -1,7 +1,7 @@
-gridgen.mask_properties module
+gridgene.mask_properties module
 ==============================
 
-.. automodule:: gridgen.mask_properties
+.. automodule:: gridgene.mask_properties
    :members:
    :undoc-members:
    :show-inheritance:

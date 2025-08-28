@@ -3,7 +3,7 @@
 src Package
 ===========
 
-.. automodule:: gridgen
+.. automodule:: gridgene
    :members:
    :undoc-members:
    :show-inheritance:

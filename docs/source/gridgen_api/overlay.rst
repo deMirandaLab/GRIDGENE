@@ -1,7 +1,7 @@
-gridgen.overlay module
+gridgene.overlay module
 =======================
 
-.. automodule:: gridgen.overlay
+.. automodule:: gridgene.overlay
    :members:
    :undoc-members:
    :show-inheritance:

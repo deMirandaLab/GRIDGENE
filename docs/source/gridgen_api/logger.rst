@@ -1,7 +1,7 @@
-gridgen.logger module
+gridgene.logger module
 =======================
 
-.. automodule:: gridgen.logger
+.. automodule:: gridgene.logger
    :members:
    :undoc-members:
    :show-inheritance:
