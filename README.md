@@ -1,12 +1,12 @@
 # GRIDGEN
 
-![CI](https://github.com/deMirandaLab/GRIDGEN/actions/workflows/ci.yml/badge.svg)
-[![Docs](https://img.shields.io/badge/docs-GitHub--Pages-blue.svg)](https://demirandalab.github.io/GRIDGEN/)
+![CI](https://github.com/deMirandaLab/GRIDGENE/actions/workflows/ci.yml/badge.svg)
+[![Docs](https://img.shields.io/badge/docs-GitHub--Pages-blue.svg)](https://demirandalab.github.io/GRIDGENE/)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)
 
 
-**GRIDGEN** (Guided Region Identification based on Density of GENes) is a Python package designed for defining  
+**GRIDGENE** (Guided Region Identification based on Density of GENEs) is a Python package designed for defining  
 regions of interest based on transcript density. It enables the identification of biologically relevant tissue compartments, including interfaces between regions  
 (e.g., cancer vs. stroma), phenotype-enriched areas, and zones defined by specific gene signatures.
 
@@ -29,7 +29,7 @@ regions of interest based on transcript density. It enables the identification o
 General view: 
 ![plot](docs/figures/gridgen.png)
 
-GRIDGEN contains the following Case Studies: 
+GRIDGENE contains the following Case Studies: 
   - tumor microenvironment analysis  
   - Definition of population-specific objects in CRC in CosMx (single and multiclass)  
   - Integration with cell segmentation pipelines  
@@ -39,13 +39,15 @@ GRIDGEN contains the following Case Studies:
 
 ## Documentation
 
-Documentation is available at [GRIDGEN Documentation](https://demirandalab-gridgen.readthedocs.io/en/latest/).
+Documentation is available at [GRIDGENE Documentation](https://demirandalab-gridgen.readthedocs.io/en/latest/).
 
 ---
 
 ## Credits
 If you find this repository useful in your research or for educational purposes please refer to:
-
+Sequeira, A. M., Ijsselsteijn, M., Rocha, M., Roelands, J., & de Miranda, N. F. (2025). 
+GRIDGENE: Guided Region Identification based on Density of GENEs-a transcript density-based approach to characterize 
+tissues by spatial transcriptomics. bioRxiv, 2025-08. https://doi.org/10.1101/2025.08.14.670318
 
 
 ## License
