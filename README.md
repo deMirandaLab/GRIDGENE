@@ -1,4 +1,4 @@
-# GRIDGEN
+# GRIDGENE
 
 ![CI](https://github.com/deMirandaLab/GRIDGENE/actions/workflows/ci.yml/badge.svg)
 [![Docs](https://img.shields.io/badge/docs-GitHub--Pages-blue.svg)](https://demirandalab.github.io/GRIDGENE/)
