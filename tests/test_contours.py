@@ -7,9 +7,9 @@ import tempfile
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
-from gridgen.contours import GetContour
-from gridgen.contours import ConvolutionContours
-from gridgen.contours import KDTreeContours
+from gridgene.contours import GetContour
+from gridgene.contours import ConvolutionContours
+from gridgene.contours import KDTreeContours
 
 
 def make_dummy_contour(center, radius, points=8):
@@ -180,4 +180,4 @@ if __name__ == '__main__':
     unittest.main()
 
 
-# (GRIDGEN) martinha@gaia:~/PycharmProjects/phd/spatial_transcriptomics/GRIDGEN$ python -m unittest tests/test_contours.py
+# (GRIDGENE) martinha@gaia:~/PycharmProjects/phd/spatial_transcriptomics/GRIDGENE$ python -m unittest tests/test_contours.py
