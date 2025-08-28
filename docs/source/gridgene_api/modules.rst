@@ -1,4 +1,4 @@
-gridgen
+gridgene
 =======
 
 .. toctree::

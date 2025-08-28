@@ -1,10 +1,10 @@
 .. GRIDGEN documentation master file, created by
    sphinx-quickstart on Fri May 23 23:57:24 2025.
 
-Welcome to GRIDGEN's documentation!
+Welcome to GRIDGENE's documentation!
 ===================================
 
-GRIDGEN is a tool for extracting, organizing, and visualizing transcriptomic spatial data.
+GRIDGENE is a tool for extracting, organizing, and visualizing transcriptomic spatial data.
 
 It is designed to help researchers and data scientists work with spatial transcriptomics data efficiently.
 
@@ -15,4 +15,4 @@ It is designed to help researchers and data scientists work with spatial transcr
    :caption: Contents:
 
    Tutorials <tutorials/index>
-   API Reference <gridgen_api/modules>
+   API Reference <gridgene_api/modules>

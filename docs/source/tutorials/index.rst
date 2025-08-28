@@ -1,7 +1,7 @@
 Examples and Tutorials
 ======================
 
-Welcome to the tutorials and getting started guide for GRIDGEN!
+Welcome to the tutorials and getting started guide for GRIDGENE!
 
 .. toctree::
    :maxdepth: 2
