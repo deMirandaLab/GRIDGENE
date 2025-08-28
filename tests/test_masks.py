@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import cv2
 import os
-from gridgen.get_masks import (GetMasks, ConstrainedMaskExpansion,
+from gridgene.get_masks import (GetMasks, ConstrainedMaskExpansion,
                                SingleClassObjectAnalysis, MultiClassObjectAnalysis)
 import logging
 from unittest.mock import MagicMock

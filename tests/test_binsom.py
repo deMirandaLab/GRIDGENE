@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import logging
 from anndata import AnnData
-from gridgen.binsom import GetBins, GetContour  # Assuming your classes are in `binsom.py`
+from gridgene.binsom import GetBins, GetContour  # Assuming your classes are in `binsom.py`
 
 class TestBinSOM(unittest.TestCase):
 

@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from gridgen.overlay import Overlay  # Assuming your class is in a file named overlay.py
+from gridgene.overlay import Overlay  # Assuming your class is in a file named overlay.py
 from PIL import Image
 
 class TestOverlay(unittest.TestCase):
